@@ -86,9 +86,59 @@
   .refresh-btn:hover{background:var(--rc-blue);color:var(--white);border-color:var(--rc-blue);transform:rotate(180deg)}
   .ar-toggle{display:flex;align-items:center;gap:6px;cursor:pointer;user-select:none;font-family:'Roboto';letter-spacing:.5px;text-transform:uppercase}
   .ar-toggle input{accent-color:var(--orange);cursor:pointer}
+  /* Header-acties (SCHERM / UPDATE NU / LIVE) — indeling productie-dashboard */
+  #rcActions{display:inline-flex;flex-direction:column;align-items:flex-end;gap:6px;margin-left:auto}
+  #rcActions .row1{display:flex;align-items:center;gap:8px}
+  #rcActions .row2{display:flex;align-items:center;gap:12px;font-size:10.5px;color:var(--ink-3);letter-spacing:.04em;font-weight:500;white-space:nowrap}
+  #rcActions .row2 b{color:var(--ink-2);font-weight:700}
+  #rcActions .row2 .sep{color:var(--ink-4);opacity:.6}
+  #rcCountdownSub{font-variant-numeric:tabular-nums}
+  #rcCountdownSub.urgent{color:var(--orange);font-weight:700}
+  #rcFsBtn,#rcRefreshBtn,#liveBanner{display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 13px;border-radius:6px;border:1px solid var(--rc-blue);font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;font-family:'Roboto';line-height:1;box-sizing:border-box}
+  #rcFsBtn,#rcRefreshBtn{background:transparent;color:var(--light-blue);cursor:pointer;transition:all .15s ease}
+  #rcFsBtn:hover,#rcRefreshBtn:hover{background:var(--rc-blue);color:#fff;border-color:var(--rc-blue)}
+  #rcFsBtn.is-on{background:var(--rc-blue);color:#fff}
+  #rcRefreshBtn:disabled{opacity:.55;cursor:wait}
+  #liveBanner{border-color:var(--green);background:rgba(34,197,94,.16);color:#4ADE80}
+  #liveBanner .dot{display:inline-block;width:7px;height:7px;background:#22C55E;border-radius:50%;animation:rcPulse 2s infinite}
+  #liveBanner.is-warn{background:rgba(249,115,22,.16);border-color:var(--orange);color:#FDBA74}
+  #liveBanner.is-warn .dot{background:var(--orange)}
+  #liveBanner.is-stale{background:rgba(239,68,68,.16);border-color:var(--red);color:#FCA5A5}
+  #liveBanner.is-stale .dot{background:var(--red);animation:none}
+  @keyframes rcPulse{0%,100%{opacity:1}50%{opacity:.3}}
+  @media(max-width:820px){#rcActions .row2{display:none}}
   main{padding:20px 24px;max-width:none}
   .tab-section{display:none}
   .tab-section.active{display:block;animation:fadeIn .25s ease}
+  /* Industrie-tab */
+  .ind-charts{display:grid;grid-template-columns:1.35fr 1fr;gap:16px;margin-bottom:16px}
+  @media(max-width:900px){.ind-charts{grid-template-columns:1fr}}
+  .ind-progress{background:var(--surface);border:1px solid var(--border);border-left:4px solid var(--rc-blue);border-radius:var(--radius);padding:22px 24px;margin-bottom:16px}
+  .ind-progress-txt{font-size:13px;font-weight:600;color:var(--ink);margin-bottom:12px;letter-spacing:.02em}
+  .ind-progress-bar{width:100%;height:8px;background:rgba(255,255,255,.12);border-radius:5px;overflow:hidden}
+  .ind-progress-bar > i{display:block;height:100%;background:var(--rc-blue);transition:width .3s ease}
+  .ind-progress-note{font-size:11px;color:var(--ink-3);margin-top:10px}
+  .ind-list{display:flex;flex-direction:column;gap:8px}
+  .ind-acc{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+  .ind-head{display:flex;align-items:center;gap:12px;padding:12px 16px;cursor:pointer;transition:background .15s}
+  .ind-head:hover{background:rgba(0,150,214,.08)}
+  .ind-dot{width:11px;height:11px;border-radius:3px;flex:0 0 auto}
+  .ind-name{font-size:14px;font-weight:700;color:var(--white);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .ind-cnt{font-size:11px;color:var(--ink-3);white-space:nowrap}
+  .ind-share{font-size:12px;color:var(--light-blue);font-weight:700;min-width:52px;text-align:right}
+  .ind-rev{font-size:14px;font-weight:700;color:var(--white);min-width:110px;text-align:right;font-variant-numeric:tabular-nums}
+  .ind-delta{font-size:11px;font-weight:700;min-width:52px;text-align:right}
+  .ind-delta.up{color:var(--green)}
+  .ind-delta.down{color:var(--red)}
+  .ind-new{font-size:10px;font-weight:700;color:#001827;background:var(--green);border-radius:4px;padding:2px 6px;min-width:52px;text-align:center}
+  .ind-caret{color:var(--ink-3);font-size:12px;transition:transform .2s;flex:0 0 auto;width:14px;text-align:center}
+  .ind-acc.open .ind-caret{transform:rotate(90deg)}
+  .ind-clients{display:none;flex-direction:column;border-top:1px solid var(--border);background:var(--navy-dark)}
+  .ind-acc.open .ind-clients{display:flex}
+  .ind-client{display:flex;justify-content:space-between;gap:12px;padding:8px 16px 8px 39px;border-bottom:1px solid rgba(255,255,255,.04);font-size:12.5px}
+  .ind-client:last-child{border-bottom:0}
+  .ind-client .icn{color:var(--ink-2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .ind-client .icr{color:var(--ink);font-weight:600;white-space:nowrap;font-variant-numeric:tabular-nums}
   @keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
   .pyr-header{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:16px;gap:20px;flex-wrap:wrap}
   .pyr-title{font-family:'Roboto';font-size:24px;font-weight:700;letter-spacing:-.015em;color:var(--white)}
@@ -402,18 +452,6 @@
 </div>
 
 
-<div class="toolbar">
-  <div>RapidCenter B.V.</div>
-  <div class="toolbar-right">
-    <span id="refreshCountdown"></span>
-    <label class="ar-toggle">
-      <input type="checkbox" id="autoRefreshToggle">
-      <span>Auto-refresh 5 min</span>
-    </label>
-    <span id="updateInfo">Laatst bijgewerkt: 26 mei 2026</span>
-  </div>
-</div>
-
 <div class="navbar">
   <div class="brand">
     <div class="logo">
@@ -424,20 +462,32 @@
     <div class="brand-divider"></div>
     <div>
       <div class="title">Verkoop Dashboard</div>
-      <div class="subtitle">Year-to-Date &middot; Operationele KPI's</div>
+      <div class="subtitle">Year-to-Date &middot; Omzet &amp; Pipeline</div>
     </div>
   </div>
-  <div class="badges" style="display:none">
-    <div class="badge growth"><span>Groei YoY</span><b id="b-growth">+11.3%</b></div>
-    <div class="badge"><span>Periode</span><b id="b-period">Jan&ndash;Mei</b></div>
-    <div class="badge"><span>Omzet YTD</span><b id="b-rev">&euro;1,1M</b></div>
+  <div id="rcActions">
+    <div class="row1">
+      <button id="rcFsBtn" type="button" title="Volledig scherm aan/uit (Esc om te verlaten)">&#9974; Scherm</button>
+      <button id="rcRefreshBtn" type="button" title="Nu verversen">Update nu</button>
+      <span id="liveBanner"><span class="dot"></span>VERBINDING&hellip;</span>
+    </div>
+    <div class="row2">
+      <span id="rcCountdownSub">&hellip;</span>
+      <span class="sep">|</span>
+      <span id="rcUserInfo"></span>
+    </div>
   </div>
-  <div class="upload-wrap nav-upload">
-    <button id="soundToggleBtn" onclick="toggleOrderSound()" type="button" title="Geluid bij nieuwe orders" style="background:transparent;border:1px solid var(--border-2);color:var(--ink-2);padding:6px 10px;border-radius:6px;font-size:14px;cursor:pointer;line-height:1">&#128276;</button>
-    <span class="upload-info" id="fileNameLbl">Bron: orders.xlsx (ingebed)</span>
-    <button class="upload-btn" onclick="pickAndProcessFile()" type="button">&#8635; Excel laden</button>
-    <input type="file" id="fileInput" accept=".xlsx,.xls" onchange="handleFile(this)" style="display:none">
-    <button id="disconnectBtn" onclick="disconnectFile()" type="button" style="display:none;background:transparent;border:0;color:var(--ink-3);cursor:pointer;font-size:11px;text-decoration:underline" title="Stop auto-sync">ontkoppel</button>
+  <!-- Verborgen legacy-elementen: blijven bestaan zodat bestaande JS null-vrij werkt -->
+  <div style="display:none" aria-hidden="true">
+    <span id="refreshCountdown"></span>
+    <label class="ar-toggle"><input type="checkbox" id="autoRefreshToggle"><span>Auto-refresh</span></label>
+    <span id="updateInfo"></span>
+    <span id="b-growth"></span><span id="b-period"></span><span id="b-rev"></span>
+    <span class="upload-info" id="fileNameLbl"></span>
+    <button id="soundToggleBtn" onclick="toggleOrderSound()" type="button">&#128276;</button>
+    <button class="upload-btn" onclick="pickAndProcessFile()" type="button">Excel</button>
+    <input type="file" id="fileInput" accept=".xlsx,.xls" onchange="handleFile(this)">
+    <button id="disconnectBtn" onclick="disconnectFile()" type="button">ontkoppel</button>
   </div>
 </div>
 
@@ -445,6 +495,7 @@
   <button class="tab-btn active" onclick="switchTab('deze-maand',this)">Deze Maand</button>
   <button class="tab-btn" onclick="switchTab('overzicht',this)">Overzicht YTD</button>
   <button class="tab-btn" onclick="switchTab('klanten',this)">ABC Accounts</button>
+  <button class="tab-btn" onclick="switchTab('industrie',this)">Industrie</button>
   <button class="tab-btn" onclick="switchTab('maanden',this)">Maandvergelijking</button>
   <button class="tab-btn" onclick="switchTab('trends',this)">Trends &amp; Prognose</button>
   <button class="tab-btn" onclick="switchTab('piramide',this)">Piramide</button>
@@ -524,6 +575,29 @@
       <button class="abc-tab-btn" type="button" onclick="setAbcTab('C',this)">C-accounts</button>
     </div>
     <div class="client-grid" id="clientGrid"></div>
+  </section>
+
+  <section class="tab-section" id="tab-industrie">
+    <div class="pyr-header">
+      <div>
+        <div class="pyr-title">Omzet per industrie</div>
+        <div class="pyr-subtitle">YTD <span id="indYear"></span> &middot; NET-omzet &middot; gekoppeld via de AMFG-klantkaart (industrie)</div>
+      </div>
+      <button class="yr-btn" type="button" id="indRefreshBtn" onclick="refreshIndustries()" title="Industrie-data opnieuw ophalen uit AMFG">&#8635; industrie verversen</button>
+    </div>
+    <div id="indProgress" class="ind-progress" style="display:none">
+      <div class="ind-progress-txt" id="indProgTxt">Industrie-data ophalen&hellip;</div>
+      <div class="ind-progress-bar"><i id="indProgBar" style="width:4%"></i></div>
+      <div class="ind-progress-note">Eenmalig per klant &mdash; daarna gecached en vrijwel instant.</div>
+    </div>
+    <div id="indBody" style="display:none">
+      <div class="ind-charts">
+        <div class="chart-box"><div class="chart-title"><span>Omzet per industrie &mdash; YTD <span class="ind-yr"></span></span><span class="sub">NET &euro;</span></div><div class="chart-canvas-wrap tall"><canvas id="chartIndBar"></canvas></div></div>
+        <div class="chart-box"><div class="chart-title"><span>Aandeel omzet</span><span class="sub">% van YTD</span></div><div class="chart-canvas-wrap tall"><canvas id="chartIndDonut"></canvas></div></div>
+      </div>
+      <div class="chart-box" style="margin-bottom:16px"><div class="chart-title"><span>Jaar-op-jaar per industrie</span><span class="sub">YTD dit jaar vs. vorig jaar (dag-precies)</span></div><div class="chart-canvas-wrap tall"><canvas id="chartIndYoY"></canvas></div></div>
+      <div class="ind-list" id="indList"></div>
+    </div>
   </section>
 
   <section class="tab-section" id="tab-maanden">
@@ -689,6 +763,7 @@ function switchTab(id, btn){
   const show = tabsWithYearFilter.indexOf(id) >= 0;
   if(fb) fb.style.display = show ? 'flex' : 'none';
   if(yt) yt.style.display = show ? 'flex' : 'none';
+  if(id==='industrie' && hasData()){ ensureIndustryLoaded(); }
   setTimeout(()=>Object.values(charts).forEach(c=>c&&c.resize()),30);
 }
 
@@ -2312,7 +2387,7 @@ async function amfgFetchRange(fromYear, toYearExcl, onProgress){
   function map(rows){ return rows.map(function(p){ return {
     'TICKET ID':String(p.ticketId||''),'PROJECT ID':p.projectId||'','ORDER DATE':p.orderCreatedAt||'',
     'BILLING COMPANY':p.companyName||'','CUSTOMER COMPANY':p.companyName||'','TICKET STATUS':p.ticketStatusName||'',
-    'CUSTOM PROJECT ID':p.customProjectId||'','CUSTOMER NAME':p.customerFullName||'',
+    'CUSTOM PROJECT ID':p.customProjectId||'','CUSTOMER NAME':p.customerFullName||'','CUSTOMER ID':p.customerId||'',
     'TOTAL NET PRICE':parseFloat(p.totalPrice||0)||0,'TOTAL GROSS PRICE':parseFloat(p.totalPriceInclVat||0)||0 }; }); }
   try{
     let all=[], pageIdx=0;
@@ -2371,6 +2446,8 @@ async function amfgAugment(){
   // Behoud base-rijen van jaren die AMFG NIET dekt (< fromYear); vervang de rest door AMFG.
   const merged=base.filter(function(r){ const d=new Date(r['ORDER DATE']); return isNaN(d) || d.getFullYear() < fromYear; }).concat(amfg);
   processWithFilter(merged, 'AMFG live');
+  window.__vkLastFetch = new Date();
+  if(typeof updateLivePill==='function') updateLivePill();
   const lbl=document.getElementById('fileNameLbl');
   if(lbl) lbl.innerHTML='&#128994; AMFG live &middot; '+amfg.length+' orders ('+fromYear+'&ndash;'+yr+')'+(haveHistory?' + Excel-historie':'');
   return true;
@@ -2636,7 +2713,7 @@ function processExcelData(rows, fileName){
     let dt = r['ORDER DATE'];
     if(typeof dt === 'string') dt = new Date(dt);
     else if(!(dt instanceof Date)) dt = new Date(dt);
-    return { y: dt.getFullYear(), m: dt.getMonth()+1, d: dt.getDate(), client: clientKeyOf(r), rev: parseFloat(r['TOTAL NET PRICE'])||0 };
+    return { y: dt.getFullYear(), m: dt.getMonth()+1, d: dt.getDate(), client: clientKeyOf(r), cust: (r['CUSTOMER ID']!=null?String(r['CUSTOMER ID']):''), rev: parseFloat(r['TOTAL NET PRICE'])||0 };
   }).filter(function(o){ return !isNaN(o.y); });
 
   // Bereken account status A/B/C per klant (afgelopen 6 maanden, NET, niet-cancelled)
@@ -3053,6 +3130,242 @@ function refreshDashboard(){
   renderBadges(); renderThisMonth(); renderKPIs(); renderClients(); renderCmpTable(); renderInsights(); renderChurnKPIs(); renderOrders(); renderPyramid();
   initCharts(); renderLast6Chart();
   renderPipeline();
+  // Industrie-tab live bijwerken als die open staat en de data al geladen is
+  const indTab = document.getElementById('tab-industrie');
+  if(indTab && indTab.classList.contains('active') && INDUSTRY_LOADED && !INDUSTRY_LOADING) renderIndustry();
+}
+
+// ======================= OMZET PER INDUSTRIE =======================
+// Koppeling: order.CUSTOMER ID -> AMFG-klantkaart (/management/customers/{id}) -> industry.name
+// Industrie zit niet in de klantenlijst, dus per unieke klant 1x ophalen + cachen.
+const RC_IND_CACHE_KEY = 'rc_vk_industry_v1';
+let INDUSTRY_MAP = null;       // {customerId: industryName ('' = geen industrie ingevuld)}
+let INDUSTRY_LOADING = false;
+let INDUSTRY_LOADED = false;
+
+const IND_COLORS = {
+  'Medisch':'#DC2626',
+  'Militair & Defensie & Ruimtevaart':'#002B49',
+  'Mobiliteit & Vervoer':'#3A8DDE',
+  'Industrieel':'#87898B',
+  'Consumenten Goederen & Elektronica':'#7C3AED',
+  'Producent':'#16A34A',
+  'Onderwijs':'#EA580C',
+  'Onbekend':'#64748B'
+};
+const IND_FALLBACK = ['#0096D6','#59BBE4','#F59E0B','#A78BFA','#22C55E','#EF4444','#EAB308','#14B8A6'];
+function indColor(name, i){ return IND_COLORS[name] || IND_FALLBACK[i % IND_FALLBACK.length]; }
+
+function loadIndustryCache(){
+  if(INDUSTRY_MAP) return INDUSTRY_MAP;
+  let m={};
+  try{ const raw=localStorage.getItem(RC_IND_CACHE_KEY); if(raw) m=JSON.parse(raw)||{}; }catch(e){}
+  INDUSTRY_MAP=m; return m;
+}
+function saveIndustryCache(){ try{ localStorage.setItem(RC_IND_CACHE_KEY, JSON.stringify(INDUSTRY_MAP||{})); }catch(e){} }
+
+function uniqueCustomerIds(){
+  const s=new Set();
+  (DATA.all_orders||[]).forEach(function(o){ if(o.cust) s.add(String(o.cust)); });
+  return Array.from(s);
+}
+
+// Haal industrie op voor alle klanten die nog niet gecached zijn (SEQUENTIEEL — parallel
+// triggert een AMFG-uitlog).
+async function amfgFetchIndustries(onProgress){
+  let token=null; try{ token=localStorage.getItem('accessToken'); }catch(e){}
+  if(!token) return false;
+  const H={Authorization:token, Accept:'application/json'};
+  const map=loadIndustryCache();
+  const ids=uniqueCustomerIds().filter(function(id){ return !(id in map); });
+  const total=ids.length;
+  for(let i=0;i<total;i++){
+    const id=ids[i];
+    try{
+      const r=await fetch('/management/customers/'+id,{headers:H});
+      if(r.ok){ const b=await r.json(); const c=b&&b.customer; map[id]=(c&&c.industry&&c.industry.name)?c.industry.name:''; }
+      else { map[id]=''; }
+    }catch(e){ map[id]=''; }
+    if(onProgress){ try{ onProgress(i+1, total); }catch(e){} }
+    if(i%25===24) saveIndustryCache();
+  }
+  saveIndustryCache();
+  return true;
+}
+
+function dayOfYearYMD(y,m,d){ const start=new Date(y,0,0); const dt=new Date(y,(m||1)-1,(d||1)); return Math.floor((dt-start)/86400000); }
+
+// AMFG bevat naast de 7 huidige (NL) industrieën ook oude Engelse dubbelen en
+// placeholders. Die vouwen we samen zodat de grafiek niet versplintert.
+const IND_MERGE = {
+  'healthcare':'Medisch',
+  'medical':'Medisch',
+  'consumer goods':'Consumenten Goederen & Elektronica',
+  'consumer goods & electronics':'Consumenten Goederen & Elektronica',
+  'electronics':'Consumenten Goederen & Elektronica',
+  'manufacturing':'Producent',
+  'producer':'Producent',
+  'parts provider':'Producent',
+  'mobility & transportation':'Mobiliteit & Vervoer',
+  'mobility and transportation':'Mobiliteit & Vervoer',
+  'industrial':'Industrieel',
+  'education':'Onderwijs',
+  'military & defense & aerospace':'Militair & Defensie & Ruimtevaart',
+  'military, defense & aerospace':'Militair & Defensie & Ruimtevaart',
+  'military & defence & aerospace':'Militair & Defensie & Ruimtevaart'
+};
+function normalizeIndustry(raw){
+  const n=(raw||'').trim();
+  if(!n) return 'Onbekend';
+  const low=n.toLowerCase();
+  if(low==='-' || low==='please select your industry' || low==='select your industry' || low==='n/a') return 'Onbekend';
+  return IND_MERGE[low] || n;
+}
+
+// Aggregatie per industrie: full/ytd omzet per jaar, orders per jaar, klanten (huidig jaar)
+function computeIndustryAgg(){
+  const map=loadIndustryCache();
+  const cutoff=DATA.ytd_day_of_year || 366;
+  const cur=DATA.current_year;
+  const agg={};
+  (DATA.all_orders||[]).forEach(function(o){
+    let nm = normalizeIndustry((o.cust && map[String(o.cust)]) ? map[String(o.cust)] : '');
+    if(!nm) nm='Onbekend';
+    if(!agg[nm]) agg[nm]={full:{}, ytd:{}, ord:{}, clients:{}};
+    const a=agg[nm];
+    a.full[o.y]=(a.full[o.y]||0)+o.rev;
+    if(dayOfYearYMD(o.y,o.m,o.d)<=cutoff){ a.ytd[o.y]=(a.ytd[o.y]||0)+o.rev; }
+    a.ord[o.y]=(a.ord[o.y]||0)+1;
+    if(o.y===cur){ a.clients[o.client]=(a.clients[o.client]||0)+o.rev; }
+  });
+  return agg;
+}
+
+function showIndProgress(done,total){
+  const box=document.getElementById('indProgress'), body=document.getElementById('indBody');
+  if(box) box.style.display='block';
+  if(body) body.style.display='none';
+  const bar=document.getElementById('indProgBar'), txt=document.getElementById('indProgTxt');
+  const pct=total?Math.max(4,Math.round(done/total*100)):100;
+  if(bar) bar.style.width=pct+'%';
+  if(txt) txt.textContent='Industrie-data ophalen uit AMFG… '+done.toLocaleString('nl-NL')+' / '+total.toLocaleString('nl-NL')+' klanten';
+}
+function hideIndProgress(){ const box=document.getElementById('indProgress'); if(box) box.style.display='none'; }
+
+// Lazy-load: bij openen van de tab. Alleen ontbrekende klanten worden opgehaald.
+async function ensureIndustryLoaded(){
+  loadIndustryCache();
+  const yrEl=document.getElementById('indYear'); if(yrEl) yrEl.textContent=DATA.current_year||'';
+  document.querySelectorAll('#tab-industrie .ind-yr').forEach(function(e){ e.textContent=DATA.current_year||''; });
+  if(INDUSTRY_LOADING) return;
+  const missing=uniqueCustomerIds().filter(function(id){ return !(id in INDUSTRY_MAP); });
+  if(missing.length===0){ INDUSTRY_LOADED=true; hideIndProgress(); renderIndustry(); return; }
+  INDUSTRY_LOADING=true;
+  showIndProgress(0, missing.length);
+  try{ await amfgFetchIndustries(function(done,total){ showIndProgress(done,total); }); }
+  catch(e){ console.warn('industrie ophalen faalde', e); }
+  INDUSTRY_LOADING=false; INDUSTRY_LOADED=true;
+  hideIndProgress();
+  renderIndustry();
+}
+
+// Handmatig verversen: cache legen en opnieuw ophalen
+async function refreshIndustries(){
+  INDUSTRY_MAP={}; saveIndustryCache(); INDUSTRY_LOADED=false;
+  await ensureIndustryLoaded();
+}
+
+function renderIndustry(){
+  const body=document.getElementById('indBody');
+  if(!body) return;
+  body.style.display='block';
+  const cur=DATA.current_year, prev=cur-1;
+  const agg=computeIndustryAgg();
+  // sorteer industrieën op YTD-omzet huidig jaar (desc); Onbekend altijd achteraan
+  let names=Object.keys(agg);
+  names.sort(function(a,b){
+    if(a==='Onbekend' && b!=='Onbekend') return 1;
+    if(b==='Onbekend' && a!=='Onbekend') return -1;
+    return (agg[b].ytd[cur]||0)-(agg[a].ytd[cur]||0);
+  });
+  const ytdCur=names.map(function(n){ return Math.round(agg[n].ytd[cur]||0); });
+  const ytdPrev=names.map(function(n){ return Math.round(agg[n].ytd[prev]||0); });
+  const totalCur=ytdCur.reduce(function(a,b){return a+b;},0);
+  const colors=names.map(function(n,i){ return indColor(n,i); });
+
+  // --- Staafgrafiek: omzet per industrie (YTD huidig jaar) ---
+  if(charts.indBar) charts.indBar.destroy();
+  charts.indBar=new Chart(document.getElementById('chartIndBar'),{
+    type:'bar',
+    plugins:[makeLabelsPlugin(fmtEurShort)],
+    data:{labels:names, datasets:[{label:'YTD '+cur, data:ytdCur, backgroundColor:colors, borderRadius:4}]},
+    options:Object.assign({}, CD, {
+      plugins:Object.assign({}, CD.plugins, {legend:{display:false}, tooltip:Object.assign({},CD.plugins.tooltip,{callbacks:{label:function(c){return fmtEur(c.parsed.y);}}})}),
+      scales:{ x:Object.assign({},CD.scales.x,{ticks:Object.assign({},CD.scales.x.ticks,{maxRotation:35,minRotation:0,font:{size:10,family:'Roboto'}})}),
+               y:Object.assign({},CD.scales.y,{beginAtZero:true,ticks:Object.assign({},CD.scales.y.ticks,{callback:function(v){return fmtEurShort(v);}})}) }
+    })
+  });
+
+  // --- Donut: aandeel % (YTD huidig jaar) ---
+  if(charts.indDonut) charts.indDonut.destroy();
+  charts.indDonut=new Chart(document.getElementById('chartIndDonut'),{
+    type:'doughnut',
+    data:{labels:names, datasets:[{data:ytdCur, backgroundColor:colors, borderColor:'#001827', borderWidth:2}]},
+    options:{responsive:true, maintainAspectRatio:false, cutout:'58%',
+      plugins:{legend:{position:'right',labels:{color:'#CFD2D3',font:{size:10,family:'Roboto'},boxWidth:12,padding:8}},
+        tooltip:Object.assign({},CD.plugins.tooltip,{callbacks:{label:function(c){const v=c.parsed; const pct=totalCur?((v/totalCur)*100).toFixed(1):'0'; return c.label+': '+fmtEur(v)+' ('+pct+'%)';}}})}}
+  });
+
+  // --- YoY grouped bars ---
+  if(charts.indYoY) charts.indYoY.destroy();
+  charts.indYoY=new Chart(document.getElementById('chartIndYoY'),{
+    type:'bar',
+    data:{labels:names, datasets:[
+      {label:'YTD '+cur, data:ytdCur, backgroundColor:'#0096D6', borderRadius:3},
+      {label:'YTD '+prev, data:ytdPrev, backgroundColor:'#EA580C', borderRadius:3}
+    ]},
+    options:Object.assign({}, CD, {
+      plugins:Object.assign({}, CD.plugins, {tooltip:Object.assign({},CD.plugins.tooltip,{callbacks:{label:function(c){return c.dataset.label+': '+fmtEur(c.parsed.y);}}})}),
+      scales:{ x:Object.assign({},CD.scales.x,{ticks:Object.assign({},CD.scales.x.ticks,{maxRotation:35,font:{size:10,family:'Roboto'}})}),
+               y:Object.assign({},CD.scales.y,{beginAtZero:true,ticks:Object.assign({},CD.scales.y.ticks,{callback:function(v){return fmtEurShort(v);}})}) }
+    })
+  });
+
+  // --- Klantenlijst per industrie (uitklapbaar) ---
+  let html='';
+  names.forEach(function(n,i){
+    const cRev=Math.round(agg[n].ytd[cur]||0);
+    const pRev=Math.round(agg[n].ytd[prev]||0);
+    const pct=totalCur?((cRev/totalCur)*100).toFixed(1):'0.0';
+    const delta = pRev>0 ? Math.round((cRev/pRev-1)*100) : (cRev>0?null:0);
+    const deltaTxt = (delta===null) ? '<span class="ind-new">nieuw</span>'
+                   : '<span class="ind-delta '+(delta>=0?'up':'down')+'">'+(delta>=0?'+':'')+delta+'%</span>';
+    const clients=agg[n].clients||{};
+    const clientArr=Object.keys(clients).map(function(k){return {name:k, rev:clients[k]};}).sort(function(a,b){return b.rev-a.rev;});
+    let inner='';
+    clientArr.forEach(function(c){ inner+='<div class="ind-client"><span class="icn">'+c.name+'</span><span class="icr">'+fmtEur(c.rev)+'</span></div>'; });
+    if(!clientArr.length) inner='<div class="ind-client"><span class="icn" style="color:var(--ink-4)">geen orders in '+cur+'</span></div>';
+    html+='<div class="ind-acc" data-i="'+i+'">'
+      +'<div class="ind-head" onclick="toggleIndAcc(this)">'
+        +'<span class="ind-dot" style="background:'+indColor(n,i)+'"></span>'
+        +'<span class="ind-name">'+n+'</span>'
+        +'<span class="ind-cnt">'+(agg[n].ord[cur]||0)+' orders</span>'
+        +'<span class="ind-share">'+pct+'%</span>'
+        +'<span class="ind-rev">'+fmtEur(cRev)+'</span>'
+        +deltaTxt
+        +'<span class="ind-caret">▸</span>'
+      +'</div>'
+      +'<div class="ind-clients">'+inner+'</div>'
+    +'</div>';
+  });
+  const listEl=document.getElementById('indList');
+  if(listEl) listEl.innerHTML=html;
+  setTimeout(function(){ Object.values(charts).forEach(function(c){ c&&c.resize&&c.resize(); }); },30);
+}
+
+function toggleIndAcc(el){
+  const acc=el.parentElement;
+  acc.classList.toggle('open');
 }
 
 // === Cash-register geluid bij binnenkomst nieuwe orders ===
@@ -3667,25 +3980,79 @@ const REFRESH_SECONDS = 300;
 let countdownTimer = null;
 let secondsLeft = REFRESH_SECONDS;
 
+function vkFmtDur(s){ s=Math.max(0,s|0); const m=Math.floor(s/60), ss=s%60; return m>0 ? (m+'m '+String(ss).padStart(2,'0')+'s') : (ss+'s'); }
+
 function updateCountdownLabel(){
+  const tgl = document.getElementById('autoRefreshToggle');
+  const enabled = tgl ? tgl.checked : true;
   const el = document.getElementById('refreshCountdown');
-  if(!el) return;
-  const enabled = document.getElementById('autoRefreshToggle').checked;
-  if(enabled){
-    let txt;
-    if(secondsLeft >= 60){
-      const m = Math.floor(secondsLeft/60);
-      const s = secondsLeft % 60;
-      txt = '↻ Refresh over '+m+'m '+String(s).padStart(2,'0')+'s';
-    } else {
-      txt = '↻ Refresh over '+secondsLeft+'s';
-    }
-    el.textContent = txt;
-    el.style.color = secondsLeft<=10 ? 'var(--orange)' : 'var(--muted)';
-  } else {
-    el.textContent = '⏸ Auto-refresh uit';
-    el.style.color = 'var(--muted)';
+  if(el){
+    el.textContent = enabled ? ('↻ Refresh over '+vkFmtDur(secondsLeft)) : '⏸ Auto-refresh uit';
+    el.style.color = (enabled && secondsLeft<=10) ? 'var(--orange)' : 'var(--muted)';
   }
+  // Nieuwe aftel-regel in de navbar (row2)
+  const sub = document.getElementById('rcCountdownSub');
+  if(sub){
+    if(enabled){ sub.textContent = 'over '+vkFmtDur(secondsLeft)+' · cyclus 5m'; sub.classList.toggle('urgent', secondsLeft<=10); }
+    else { sub.textContent = 'auto-refresh uit'; sub.classList.remove('urgent'); }
+  }
+  updateLivePill();
+}
+
+// Aantal orders van het huidige jaar (voor de LIVE-pill)
+function vkOrderCount(){
+  try{
+    const yr = (typeof DATA!=='undefined' && DATA && DATA.current_year) ? DATA.current_year : new Date().getFullYear();
+    return (DATA.all_orders||[]).filter(function(o){ return o.y===yr; }).length;
+  }catch(e){ return 0; }
+}
+
+// Groene LIVE-pill met tijd + order-aantal; verkleurt oranje/rood als data veroudert
+function updateLivePill(){
+  const lb = document.getElementById('liveBanner');
+  if(!lb) return;
+  if(!window.__vkLastFetch){ lb.className=''; lb.innerHTML='<span class="dot"></span>VERBINDING…'; return; }
+  const ageSec = (Date.now() - window.__vkLastFetch.getTime())/1000;
+  const cycle = REFRESH_SECONDS;
+  let cls=''; if(ageSec>=cycle*3) cls='is-stale'; else if(ageSec>=cycle*1.5) cls='is-warn';
+  lb.className = cls;
+  const t = window.__vkLastFetch.toLocaleTimeString('nl-NL',{hour:'2-digit',minute:'2-digit'});
+  lb.innerHTML = '<span class="dot"></span>LIVE · '+t+' · '+vkOrderCount().toLocaleString('nl-NL')+' orders';
+}
+
+// Volledig scherm togglen (Fullscreen-API; werkt via iframe sandbox allow-fullscreen)
+function vkToggleFullscreen(){
+  try{
+    const d=document; const fe=d.fullscreenElement||d.webkitFullscreenElement;
+    if(!fe){ const el=d.documentElement; const req=el.requestFullscreen||el.webkitRequestFullscreen; if(req) req.call(el); }
+    else { const ex=d.exitFullscreen||d.webkitExitFullscreen; if(ex) ex.call(d); }
+  }catch(e){ console.warn('fullscreen', e); }
+}
+
+// Koppel de header-acties (ingelogde naam, Update nu, Scherm, live-pill ticker)
+function vkSetupHeader(){
+  let uName='';
+  try{ uName = parent.localStorage.getItem('userFullName') || parent.localStorage.getItem('userEmail') || ''; }catch(e){}
+  if(!uName){ try{ uName = localStorage.getItem('userFullName') || localStorage.getItem('userEmail') || ''; }catch(e){} }
+  const ui = document.getElementById('rcUserInfo');
+  if(ui) ui.innerHTML = uName ? ('Ingelogd met <b>'+uName+'</b>') : 'Ingelogd via AMFG';
+  const rb = document.getElementById('rcRefreshBtn');
+  if(rb) rb.addEventListener('click', async function(){
+    rb.disabled=true; rb.textContent='Bezig…';
+    try{ await amfgRefreshRecent(); startAutoRefresh(); }
+    catch(e){ console.error('update nu', e); }
+    finally{ rb.disabled=false; rb.textContent='Update nu'; }
+  });
+  const fb = document.getElementById('rcFsBtn');
+  if(fb){
+    fb.addEventListener('click', vkToggleFullscreen);
+    const upd=function(){ const on=!!(document.fullscreenElement||document.webkitFullscreenElement); fb.classList.toggle('is-on',on); fb.innerHTML = on ? '⛶ Verlaat scherm' : '⛶ Scherm'; };
+    document.addEventListener('fullscreenchange', upd);
+    document.addEventListener('webkitfullscreenchange', upd);
+    upd();
+  }
+  updateLivePill();
+  setInterval(updateLivePill, 1000);   // pill blijft vers, ook als auto-refresh uit staat
 }
 
 function startAutoRefresh(){
@@ -3738,7 +4105,7 @@ async function amfgFetchSince(days){
   function map(rows){ return rows.map(function(p){ return {
     'TICKET ID':String(p.ticketId||''),'PROJECT ID':p.projectId||'','ORDER DATE':p.orderCreatedAt||'',
     'BILLING COMPANY':p.companyName||'','CUSTOMER COMPANY':p.companyName||'','TICKET STATUS':p.ticketStatusName||'',
-    'CUSTOM PROJECT ID':p.customProjectId||'','CUSTOMER NAME':p.customerFullName||'',
+    'CUSTOM PROJECT ID':p.customProjectId||'','CUSTOMER NAME':p.customerFullName||'','CUSTOMER ID':p.customerId||'',
     'TOTAL NET PRICE':parseFloat(p.totalPrice||0)||0,'TOTAL GROSS PRICE':parseFloat(p.totalPriceInclVat||0)||0 }; }); }
   try{
     let all=[];
@@ -3757,6 +4124,8 @@ async function amfgRefreshRecent(){
   const cutTs = res.since.getTime();
   const kept = ALL_ROWS.filter(function(r){ const d=new Date(r['ORDER DATE']); return isNaN(d) || d.getTime() < cutTs; });
   processWithFilter(kept.concat(res.rows), 'AMFG live');
+  window.__vkLastFetch = new Date();
+  if(typeof updateLivePill==='function') updateLivePill();
   const lbl=document.getElementById('fileNameLbl');
   if(lbl) lbl.innerHTML='&#128994; AMFG live &middot; bijgewerkt '+new Date().toLocaleTimeString('nl-NL',{hour:'2-digit',minute:'2-digit'});
   return true;
@@ -3770,6 +4139,7 @@ window.addEventListener('DOMContentLoaded', async function(){
   if(!hasData()){ AMFG_LOADING = false; refreshDashboard(); }   // geen AMFG-sessie -> login-melding
   initABSlider();
   initAutoRefresh();
+  vkSetupHeader();
   updateSoundBtnUI();
 });
 </script>
