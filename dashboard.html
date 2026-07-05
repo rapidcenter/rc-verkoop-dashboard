@@ -580,8 +580,8 @@
   <section class="tab-section" id="tab-industrie">
     <div class="pyr-header">
       <div>
-        <div class="pyr-title">Omzet per industrie</div>
-        <div class="pyr-subtitle">YTD <span id="indYear"></span> &middot; NET-omzet &middot; gekoppeld via de AMFG-klantkaart (industrie)</div>
+        <div class="pyr-title">Omzet &amp; orders per industrie</div>
+        <div class="pyr-subtitle">Trend over de jaren &middot; NET-omzet &middot; gekoppeld via de AMFG-klantkaart (huidig jaar = YTD)</div>
       </div>
       <button class="yr-btn" type="button" id="indRefreshBtn" onclick="refreshIndustries()" title="Industrie-data opnieuw ophalen uit AMFG">&#8635; industrie verversen</button>
     </div>
@@ -591,12 +591,14 @@
       <div class="ind-progress-note">Eenmalig per klant &mdash; daarna gecached en vrijwel instant.</div>
     </div>
     <div id="indBody" style="display:none">
-      <div class="ind-charts">
-        <div class="chart-box"><div class="chart-title"><span>Omzet per industrie &mdash; YTD <span class="ind-yr"></span></span><span class="sub">NET &euro;</span></div><div class="chart-canvas-wrap tall"><canvas id="chartIndBar"></canvas></div></div>
-        <div class="chart-box"><div class="chart-title"><span>Aandeel omzet</span><span class="sub">% van YTD</span></div><div class="chart-canvas-wrap tall"><canvas id="chartIndDonut"></canvas></div></div>
+      <div class="chart-box" style="margin-bottom:16px">
+        <div class="chart-title"><span>Omzet per industrie &mdash; per jaar</span><span class="sub">NET &euro; &middot; klik in de legenda om een industrie te verbergen</span></div>
+        <div class="chart-canvas-wrap tall"><canvas id="chartIndRevYear"></canvas></div>
       </div>
-      <div class="chart-box" style="margin-bottom:16px"><div class="chart-title"><span>Jaar-op-jaar per industrie</span><span class="sub">YTD dit jaar vs. vorig jaar (dag-precies)</span></div><div class="chart-canvas-wrap tall"><canvas id="chartIndYoY"></canvas></div></div>
-      <div class="ind-list" id="indList"></div>
+      <div class="chart-box" style="margin-bottom:16px">
+        <div class="chart-title"><span>Aantal orders per industrie &mdash; per jaar</span><span class="sub">Aantal orders &middot; klik in de legenda om te filteren</span></div>
+        <div class="chart-canvas-wrap tall"><canvas id="chartIndOrdYear"></canvas></div>
+      </div>
     </div>
   </section>
 
@@ -3166,7 +3168,7 @@ function refreshDashboard(){
 // ======================= OMZET PER INDUSTRIE =======================
 // Koppeling: order.CUSTOMER ID -> AMFG-klantkaart (/management/customers/{id}) -> industry.name
 // Industrie zit niet in de klantenlijst, dus per unieke klant 1x ophalen + cachen.
-const RC_IND_CACHE_KEY = 'rc_vk_industry_v1';
+const RC_IND_CACHE_KEY = 'rc_vk_industry_v2';   // v2: na de bulk-update in AMFG (verse industrieën)
 let INDUSTRY_MAP = null;       // {customerId: industryName ('' = geen industrie ingevuld)}
 let INDUSTRY_LOADING = false;
 let INDUSTRY_LOADED = false;
@@ -3307,93 +3309,54 @@ function renderIndustry(){
   const body=document.getElementById('indBody');
   if(!body) return;
   body.style.display='block';
-  const cur=DATA.current_year, prev=cur-1;
   const agg=computeIndustryAgg();
-  // sorteer industrieën op YTD-omzet huidig jaar (desc); Onbekend altijd achteraan
+  // jaren verzamelen uit alle industrieën
+  const yearSet=new Set();
+  Object.values(agg).forEach(function(a){
+    Object.keys(a.full).forEach(function(y){ yearSet.add(+y); });
+    Object.keys(a.ord).forEach(function(y){ yearSet.add(+y); });
+  });
+  const years=Array.from(yearSet).sort(function(a,b){return a-b;});
+  const labels=years.map(String);
+  // industrieën sorteren op totale omzet (Onbekend achteraan)
+  const totRev=function(n){ return years.reduce(function(s,y){return s+(agg[n].full[y]||0);},0); };
   let names=Object.keys(agg);
   names.sort(function(a,b){
     if(a==='Onbekend' && b!=='Onbekend') return 1;
     if(b==='Onbekend' && a!=='Onbekend') return -1;
-    return (agg[b].ytd[cur]||0)-(agg[a].ytd[cur]||0);
+    return totRev(b)-totRev(a);
   });
-  const ytdCur=names.map(function(n){ return Math.round(agg[n].ytd[cur]||0); });
-  const ytdPrev=names.map(function(n){ return Math.round(agg[n].ytd[prev]||0); });
-  const totalCur=ytdCur.reduce(function(a,b){return a+b;},0);
-  const colors=names.map(function(n,i){ return indColor(n,i); });
-
-  // --- Staafgrafiek: omzet per industrie (YTD huidig jaar) ---
-  if(charts.indBar) charts.indBar.destroy();
-  charts.indBar=new Chart(document.getElementById('chartIndBar'),{
-    type:'bar',
-    plugins:[makeLabelsPlugin(fmtEurShort)],
-    data:{labels:names, datasets:[{label:'YTD '+cur, data:ytdCur, backgroundColor:colors, borderRadius:4}]},
-    options:Object.assign({}, CD, {
-      plugins:Object.assign({}, CD.plugins, {legend:{display:false}, tooltip:Object.assign({},CD.plugins.tooltip,{callbacks:{label:function(c){return fmtEur(c.parsed.y);}}})}),
-      scales:{ x:Object.assign({},CD.scales.x,{ticks:Object.assign({},CD.scales.x.ticks,{maxRotation:35,minRotation:0,font:{size:10,family:'Roboto'}})}),
-               y:Object.assign({},CD.scales.y,{beginAtZero:true,ticks:Object.assign({},CD.scales.y.ticks,{callback:function(v){return fmtEurShort(v);}})}) }
-    })
+  function datasets(metric){
+    return names.map(function(n,i){ const c=indColor(n,i); return {
+      label:n,
+      data:years.map(function(y){ return Math.round((agg[n][metric][y])||0); }),
+      borderColor:c, backgroundColor:c, tension:.3, borderWidth:2.5,
+      pointRadius:4, pointHoverRadius:7, pointBackgroundColor:c, fill:false }; });
+  }
+  function opts(fmtAxis, fmtTip){
+    return Object.assign({}, CD, {
+      layout:{padding:{top:16,bottom:8,left:12,right:12}},
+      plugins:Object.assign({}, CD.plugins, {
+        legend:{display:true, position:'top', align:'start', labels:{color:'#CFD2D3', font:{size:10.5,family:'Roboto'}, boxWidth:12, padding:9, usePointStyle:true}},
+        tooltip:Object.assign({}, CD.plugins.tooltip, {callbacks:{label:function(c){ return c.dataset.label+': '+fmtTip(c.parsed.y||0); }}})
+      }),
+      scales:{
+        x:Object.assign({}, CD.scales.x, {ticks:Object.assign({}, CD.scales.x.ticks, {font:{size:13,weight:'600'}})}),
+        y:Object.assign({}, CD.scales.y, {beginAtZero:true, ticks:Object.assign({}, CD.scales.y.ticks, {callback:fmtAxis})})
+      }
+    });
+  }
+  if(charts.indRevYear) charts.indRevYear.destroy();
+  charts.indRevYear=new Chart(document.getElementById('chartIndRevYear'),{
+    type:'line', data:{labels:labels, datasets:datasets('full')},
+    options:opts(function(v){return fmtEurShort(v);}, function(v){return fmtEur(v);})
   });
-
-  // --- Donut: aandeel % (YTD huidig jaar) ---
-  if(charts.indDonut) charts.indDonut.destroy();
-  charts.indDonut=new Chart(document.getElementById('chartIndDonut'),{
-    type:'doughnut',
-    data:{labels:names, datasets:[{data:ytdCur, backgroundColor:colors, borderColor:'#001827', borderWidth:2}]},
-    options:{responsive:true, maintainAspectRatio:false, cutout:'58%',
-      plugins:{legend:{position:'right',labels:{color:'#CFD2D3',font:{size:10,family:'Roboto'},boxWidth:12,padding:8}},
-        tooltip:Object.assign({},CD.plugins.tooltip,{callbacks:{label:function(c){const v=c.parsed; const pct=totalCur?((v/totalCur)*100).toFixed(1):'0'; return c.label+': '+fmtEur(v)+' ('+pct+'%)';}}})}}
+  if(charts.indOrdYear) charts.indOrdYear.destroy();
+  charts.indOrdYear=new Chart(document.getElementById('chartIndOrdYear'),{
+    type:'line', data:{labels:labels, datasets:datasets('ord')},
+    options:opts(function(v){return fmtNum(v);}, function(v){return fmtNum(v)+' orders';})
   });
-
-  // --- YoY grouped bars ---
-  if(charts.indYoY) charts.indYoY.destroy();
-  charts.indYoY=new Chart(document.getElementById('chartIndYoY'),{
-    type:'bar',
-    data:{labels:names, datasets:[
-      {label:'YTD '+cur, data:ytdCur, backgroundColor:'#0096D6', borderRadius:3},
-      {label:'YTD '+prev, data:ytdPrev, backgroundColor:'#EA580C', borderRadius:3}
-    ]},
-    options:Object.assign({}, CD, {
-      plugins:Object.assign({}, CD.plugins, {tooltip:Object.assign({},CD.plugins.tooltip,{callbacks:{label:function(c){return c.dataset.label+': '+fmtEur(c.parsed.y);}}})}),
-      scales:{ x:Object.assign({},CD.scales.x,{ticks:Object.assign({},CD.scales.x.ticks,{maxRotation:35,font:{size:10,family:'Roboto'}})}),
-               y:Object.assign({},CD.scales.y,{beginAtZero:true,ticks:Object.assign({},CD.scales.y.ticks,{callback:function(v){return fmtEurShort(v);}})}) }
-    })
-  });
-
-  // --- Klantenlijst per industrie (uitklapbaar) ---
-  let html='';
-  names.forEach(function(n,i){
-    const cRev=Math.round(agg[n].ytd[cur]||0);
-    const pRev=Math.round(agg[n].ytd[prev]||0);
-    const pct=totalCur?((cRev/totalCur)*100).toFixed(1):'0.0';
-    const delta = pRev>0 ? Math.round((cRev/pRev-1)*100) : (cRev>0?null:0);
-    const deltaTxt = (delta===null) ? '<span class="ind-new">nieuw</span>'
-                   : '<span class="ind-delta '+(delta>=0?'up':'down')+'">'+(delta>=0?'+':'')+delta+'%</span>';
-    const clients=agg[n].clients||{};
-    const clientArr=Object.keys(clients).map(function(k){return {name:k, rev:clients[k]};}).sort(function(a,b){return b.rev-a.rev;});
-    let inner='';
-    clientArr.forEach(function(c){ inner+='<div class="ind-client"><span class="icn">'+c.name+'</span><span class="icr">'+fmtEur(c.rev)+'</span></div>'; });
-    if(!clientArr.length) inner='<div class="ind-client"><span class="icn" style="color:var(--ink-4)">geen orders in '+cur+'</span></div>';
-    html+='<div class="ind-acc" data-i="'+i+'">'
-      +'<div class="ind-head" onclick="toggleIndAcc(this)">'
-        +'<span class="ind-dot" style="background:'+indColor(n,i)+'"></span>'
-        +'<span class="ind-name">'+n+'</span>'
-        +'<span class="ind-cnt">'+(agg[n].ord[cur]||0)+' orders</span>'
-        +'<span class="ind-share">'+pct+'%</span>'
-        +'<span class="ind-rev">'+fmtEur(cRev)+'</span>'
-        +deltaTxt
-        +'<span class="ind-caret">▸</span>'
-      +'</div>'
-      +'<div class="ind-clients">'+inner+'</div>'
-    +'</div>';
-  });
-  const listEl=document.getElementById('indList');
-  if(listEl) listEl.innerHTML=html;
   setTimeout(function(){ Object.values(charts).forEach(function(c){ c&&c.resize&&c.resize(); }); },30);
-}
-
-function toggleIndAcc(el){
-  const acc=el.parentElement;
-  acc.classList.toggle('open');
 }
 
 // === Cash-register geluid bij binnenkomst nieuwe orders ===
