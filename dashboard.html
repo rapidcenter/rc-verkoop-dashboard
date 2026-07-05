@@ -3463,30 +3463,42 @@ function renderIndustry(){
   st('indT2','Marktaandeel per industrie '+suf);
   st('indT3','Aantal orders per industrie '+suf);
   st('indT4','Gemiddelde orderwaarde per industrie '+suf);
+  // Jaartotalen (reageren op zichtbare industrieën) — tussen haakjes op de x-as
+  const totOrdY={}; years.forEach(function(y){ totOrdY[y]=names.reduce(function(s,n){return s+((agg[n][ordKey][y])||0);},0); });
+  const totOrdFc=[0,0]; names.forEach(function(n){ totOrdFc[0]+=fcOrd[n][0]; totOrdFc[1]+=fcOrd[n][1]; });
+  function mkLabels(realTot, fcTot){
+    const arr=years.map(function(y){ return String(y)+' ('+realTot(y)+')'; });
+    if(showFc){ fcYears.forEach(function(y,k){ arr.push(String(y)+' ('+fcTot(k)+')'); }); }
+    return arr;
+  }
+  const labRev=mkLabels(function(y){return fmtEurShort(totY[y]||0);}, function(k){return fmtEurShort(totFc[k]||0);});
+  const labOrd=mkLabels(function(y){return fmtNum(totOrdY[y]||0);}, function(k){return fmtNum(totOrdFc[k]||0);});
+  const labShare=labRev;   // marktaandeel: absolute totaalomzet als context
+  const labAov=mkLabels(function(y){return totOrdY[y]? fmtEurShort(Math.round(totY[y]/totOrdY[y])):'-';}, function(k){return totOrdFc[k]? fmtEurShort(Math.round(totFc[k]/totOrdFc[k])):'-';});
   // 1) Omzet
   if(charts.indRevYear) charts.indRevYear.destroy();
   charts.indRevYear=new Chart(document.getElementById('chartIndRevYear'),{ type:'line',
-    data:{labels:labels, datasets:ds(rev, function(n){return fcRev[n];})},
+    data:{labels:labRev, datasets:ds(rev, function(n){return fcRev[n];})},
     options:opts(function(v){return fmtEurShort(v);}, function(v){return fmtEur(v);}),
     plugins:[indPointLabels(function(v){return fmtEurShort(v);})] });
   // 2) Marktaandeel (100% gestapelde vlakken)
   if(charts.indShare) charts.indShare.destroy();
   const shareFc=function(n){ return [ totFc[0]? +(fcRev[n][0]/totFc[0]*100).toFixed(1):0, totFc[1]? +(fcRev[n][1]/totFc[1]*100).toFixed(1):0 ]; };
   charts.indShare=new Chart(document.getElementById('chartIndShare'),{ type:'line',
-    data:{labels:labels, datasets:ds(share, shareFc, true)},
+    data:{labels:labShare, datasets:ds(share, shareFc, true)},
     options:opts(function(v){return v+'%';}, function(v){return v.toFixed(1)+'%';}, true, 100),
     plugins:[indPointLabels(function(v){return Math.round(v)+'%';})] });
   // 3) Aantal orders
   if(charts.indOrdYear) charts.indOrdYear.destroy();
   charts.indOrdYear=new Chart(document.getElementById('chartIndOrdYear'),{ type:'line',
-    data:{labels:labels, datasets:ds(ord, function(n){return fcOrd[n];})},
+    data:{labels:labOrd, datasets:ds(ord, function(n){return fcOrd[n];})},
     options:opts(function(v){return fmtNum(v);}, function(v){return fmtNum(v)+' orders';}),
     plugins:[indPointLabels(function(v){return fmtNum(v);})] });
   // 4) Gemiddelde orderwaarde
   if(charts.indAov) charts.indAov.destroy();
   const aovFc=function(n){ return [ fcOrd[n][0]? Math.round(fcRev[n][0]/fcOrd[n][0]):0, fcOrd[n][1]? Math.round(fcRev[n][1]/fcOrd[n][1]):0 ]; };
   charts.indAov=new Chart(document.getElementById('chartIndAov'),{ type:'line',
-    data:{labels:labels, datasets:ds(aov, aovFc)},
+    data:{labels:labAov, datasets:ds(aov, aovFc)},
     options:opts(function(v){return fmtEurShort(v);}, function(v){return fmtEur(v);}),
     plugins:[indPointLabels(function(v){return fmtEurShort(v);})] });
   setTimeout(function(){ Object.values(charts).forEach(function(c){ c&&c.resize&&c.resize(); }); },30);
