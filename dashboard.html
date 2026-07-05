@@ -595,6 +595,7 @@
         <div class="ind-modebar" style="display:flex;gap:8px">
           <button id="indModeYtd" class="yr-btn active" type="button" onclick="setIndMode('ytd')">YTD</button>
           <button id="indModeYear" class="yr-btn" type="button" onclick="setIndMode('year')">Per jaar</button>
+          <button id="indFcBtn" class="yr-btn active" type="button" onclick="setIndFc()" title="Prognose 2 jaar o.b.v. historische groei">&#128200; Prognose 2 jr</button>
         </div>
         <div class="abc-tabbar">
           <button id="indAbc_all" class="abc-tab-btn active" type="button" onclick="setIndAbc('all')">Alle</button>
@@ -3340,6 +3341,11 @@ function setIndAbc(cls){
   ['all','A','B','C'].forEach(function(k){ const b=document.getElementById('indAbc_'+k); if(b) b.classList.toggle('active', k===cls); });
   renderIndustry();
 }
+function setIndFc(){
+  window.__indFc = (window.__indFc===false);   // toggle (default = aan)
+  const b=document.getElementById('indFcBtn'); if(b) b.classList.toggle('active', window.__indFc!==false);
+  renderIndustry();
+}
 // Gedeelde sector-filterbalk: chips die alle charts tegelijk filteren
 function renderIndFilter(allNames){
   const el=document.getElementById('indFilter'); if(!el) return;
@@ -3363,14 +3369,21 @@ function renderIndustry(){
   const mode = window.__indMode || 'ytd';
   const revKey = mode==='ytd' ? 'ytd' : 'full';
   const ordKey = mode==='ytd' ? 'ordYtd' : 'ord';
+  const showFc = window.__indFc !== false;   // prognose aan (default)
   window.__indHidden = window.__indHidden || new Set();
   const hidden = window.__indHidden;
   const agg=computeIndustryAgg();
+  const cur = DATA.current_year;
   // jaren
   const yearSet=new Set();
   Object.values(agg).forEach(function(a){ Object.keys(a.full).forEach(function(y){ yearSet.add(+y); }); Object.keys(a.ord).forEach(function(y){ yearSet.add(+y); }); });
   const years=Array.from(yearSet).sort(function(a,b){return a-b;});
-  const labels=years.map(String);
+  const fcYears = showFc ? [cur+1, cur+2] : [];
+  const labels=years.concat(fcYears).map(String);
+  const lastRealIdx = years.length-1;
+  // fractie van huidig jaar verstreken (voor voljaar-projectie in 'per jaar'-modus)
+  const frac=(DATA.ytd_day_of_year||365)/365;
+  const projF = (mode==='year' && frac>0.02 && frac<1) ? (1/frac) : 1;
   // alle industrieën gesorteerd op totale omzet (gekozen modus); Onbekend achteraan
   const totRev=function(n){ return years.reduce(function(s,y){return s+((agg[n][revKey][y])||0);},0); };
   const allNames=Object.keys(agg).sort(function(a,b){
@@ -3381,20 +3394,43 @@ function renderIndustry(){
   renderIndFilter(allNames);
   const names=allNames.filter(function(n){ return !hidden.has(n); });
   const colorOf=function(n){ return indColor(n, allNames.indexOf(n)); };
-  // totaal per jaar over ZICHTBARE industrieën (voor marktaandeel)
+  // gemiddelde jaargroei (geometrisch, geklemd 0,5-2,0)
+  function growthOf(arr){ const r=[]; for(let i=1;i<arr.length;i++){ if(arr[i-1]>0 && arr[i]>0) r.push(arr[i]/arr[i-1]); } if(!r.length) return 1; let p=1; r.forEach(function(x){p*=x;}); return Math.max(0.5, Math.min(2, Math.pow(p, 1/r.length))); }
+  // prognose per industrie voor omzet & orders (2 jaar)
+  const fcRev={}, fcOrd={};
+  names.forEach(function(n){
+    const rs=years.map(function(y){return (agg[n][revKey][y])||0;});
+    const os=years.map(function(y){return (agg[n][ordKey][y])||0;});
+    if(projF>1){ rs[rs.length-1]=rs[rs.length-1]*projF; os[os.length-1]=os[os.length-1]*projF; }  // huidig jaar naar voljaar
+    const gR=growthOf(rs), gO=growthOf(os);
+    const aR=rs[rs.length-1]||0, aO=os[os.length-1]||0;
+    fcRev[n]=[Math.round(aR*gR), Math.round(aR*gR*gR)];
+    fcOrd[n]=[Math.round(aO*gO), Math.round(aO*gO*gO)];
+  });
+  // totalen per jaar over ZICHTBARE industrieën (voor marktaandeel)
   const totY={}; years.forEach(function(y){ totY[y]=names.reduce(function(s,n){return s+((agg[n][revKey][y])||0);},0); });
-  function lineDs(valFn){
-    return names.map(function(n){ const c=colorOf(n); return {
-      label:n, data:years.map(function(y){ return valFn(n,y); }),
-      borderColor:c, backgroundColor:c, tension:.3, borderWidth:2.5,
-      pointRadius:4, pointHoverRadius:7, pointBackgroundColor:c, fill:false }; });
+  const totFc=[0,0]; names.forEach(function(n){ totFc[0]+=fcRev[n][0]; totFc[1]+=fcRev[n][1]; });
+  const rev=function(n,y){ return Math.round((agg[n][revKey][y])||0); };
+  const ord=function(n,y){ return Math.round((agg[n][ordKey][y])||0); };
+  const aov=function(n,y){ const r=(agg[n][revKey][y])||0, o=(agg[n][ordKey][y])||0; return o? Math.round(r/o):0; };
+  const share=function(n,y){ const t=totY[y]; return t? +(((agg[n][revKey][y])||0)/t*100).toFixed(1):0; };
+  // dataset-builder: reële jaren + (optioneel) 2 prognosejaren, prognose gestippeld
+  function ds(realFn, fcFn, fill){
+    return names.map(function(n){ const c=colorOf(n);
+      const data=years.map(function(y){ return realFn(n,y); }).concat(showFc? fcFn(n):[]);
+      return {label:n, data:data, borderColor:c, backgroundColor:c, tension:.3, borderWidth:2.5,
+        pointRadius:3.5, pointHoverRadius:7, pointBackgroundColor:c, fill:!!fill,
+        segment:{ borderDash:function(ctx){ return ctx.p0DataIndex>=lastRealIdx ? [6,5] : undefined; } } }; });
   }
   function opts(fmtAxis, fmtTip, stacked, ymax){
     return Object.assign({}, CD, {
       layout:{padding:{top:16,bottom:8,left:12,right:12}},
       plugins:Object.assign({}, CD.plugins, {
         legend:{display:false},
-        tooltip:Object.assign({}, CD.plugins.tooltip, {callbacks:{label:function(c){ return c.dataset.label+': '+fmtTip(c.parsed.y||0); }}})
+        tooltip:Object.assign({}, CD.plugins.tooltip, {callbacks:{
+          title:function(items){ const l=items[0].label; return (+l>cur) ? (l+' (prognose)') : l; },
+          label:function(c){ return c.dataset.label+': '+fmtTip(c.parsed.y||0); }
+        }})
       }),
       scales:{
         x:Object.assign({}, CD.scales.x, {ticks:Object.assign({}, CD.scales.x.ticks, {font:{size:13,weight:'600'}})}),
@@ -3402,29 +3438,34 @@ function renderIndustry(){
       }
     });
   }
-  const suf = mode==='ytd' ? '— YTD (t/m zelfde dag)' : '— per volledig jaar';
+  const suf = (mode==='ytd' ? '— YTD (t/m zelfde dag)' : '— per volledig jaar') + (showFc ? ' · incl. prognose 2 jr' : '');
   const st=function(id,t){ const e=document.getElementById(id); if(e) e.textContent=t; };
   st('indT1','Omzet per industrie '+suf);
   st('indT2','Marktaandeel per industrie '+suf);
   st('indT3','Aantal orders per industrie '+suf);
   st('indT4','Gemiddelde orderwaarde per industrie '+suf);
-  const rev=function(n,y){ return Math.round((agg[n][revKey][y])||0); };
-  const ord=function(n,y){ return Math.round((agg[n][ordKey][y])||0); };
-  const aov=function(n,y){ const r=(agg[n][revKey][y])||0, o=(agg[n][ordKey][y])||0; return o? Math.round(r/o):0; };
-  const share=function(n,y){ const t=totY[y]; return t? +(((agg[n][revKey][y])||0)/t*100).toFixed(1):0; };
   // 1) Omzet
   if(charts.indRevYear) charts.indRevYear.destroy();
-  charts.indRevYear=new Chart(document.getElementById('chartIndRevYear'),{ type:'line', data:{labels:labels, datasets:lineDs(rev)}, options:opts(function(v){return fmtEurShort(v);}, function(v){return fmtEur(v);}) });
+  charts.indRevYear=new Chart(document.getElementById('chartIndRevYear'),{ type:'line',
+    data:{labels:labels, datasets:ds(rev, function(n){return fcRev[n];})},
+    options:opts(function(v){return fmtEurShort(v);}, function(v){return fmtEur(v);}) });
   // 2) Marktaandeel (100% gestapelde vlakken)
   if(charts.indShare) charts.indShare.destroy();
-  const shareDs=lineDs(share).map(function(d){ d.fill=true; return d; });
-  charts.indShare=new Chart(document.getElementById('chartIndShare'),{ type:'line', data:{labels:labels, datasets:shareDs}, options:opts(function(v){return v+'%';}, function(v){return v.toFixed(1)+'%';}, true, 100) });
+  const shareFc=function(n){ return [ totFc[0]? +(fcRev[n][0]/totFc[0]*100).toFixed(1):0, totFc[1]? +(fcRev[n][1]/totFc[1]*100).toFixed(1):0 ]; };
+  charts.indShare=new Chart(document.getElementById('chartIndShare'),{ type:'line',
+    data:{labels:labels, datasets:ds(share, shareFc, true)},
+    options:opts(function(v){return v+'%';}, function(v){return v.toFixed(1)+'%';}, true, 100) });
   // 3) Aantal orders
   if(charts.indOrdYear) charts.indOrdYear.destroy();
-  charts.indOrdYear=new Chart(document.getElementById('chartIndOrdYear'),{ type:'line', data:{labels:labels, datasets:lineDs(ord)}, options:opts(function(v){return fmtNum(v);}, function(v){return fmtNum(v)+' orders';}) });
+  charts.indOrdYear=new Chart(document.getElementById('chartIndOrdYear'),{ type:'line',
+    data:{labels:labels, datasets:ds(ord, function(n){return fcOrd[n];})},
+    options:opts(function(v){return fmtNum(v);}, function(v){return fmtNum(v)+' orders';}) });
   // 4) Gemiddelde orderwaarde
   if(charts.indAov) charts.indAov.destroy();
-  charts.indAov=new Chart(document.getElementById('chartIndAov'),{ type:'line', data:{labels:labels, datasets:lineDs(aov)}, options:opts(function(v){return fmtEurShort(v);}, function(v){return fmtEur(v);}) });
+  const aovFc=function(n){ return [ fcOrd[n][0]? Math.round(fcRev[n][0]/fcOrd[n][0]):0, fcOrd[n][1]? Math.round(fcRev[n][1]/fcOrd[n][1]):0 ]; };
+  charts.indAov=new Chart(document.getElementById('chartIndAov'),{ type:'line',
+    data:{labels:labels, datasets:ds(aov, aovFc)},
+    options:opts(function(v){return fmtEurShort(v);}, function(v){return fmtEur(v);}) });
   setTimeout(function(){ Object.values(charts).forEach(function(c){ c&&c.resize&&c.resize(); }); },30);
 }
 
