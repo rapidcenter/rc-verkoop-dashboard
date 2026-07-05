@@ -3362,6 +3362,25 @@ function renderIndFilter(allNames){
     el.appendChild(chip);
   });
 }
+// Tekent de waarde boven elke stip (in de lijnkleur); slaat verborgen datasets en nullen over.
+function indPointLabels(fmt){
+  return {
+    id:'indlbl',
+    afterDatasetsDraw:function(chart){
+      const ctx=chart.ctx; ctx.save(); ctx.font='600 9px Roboto'; ctx.textAlign='center';
+      chart.data.datasets.forEach(function(dsx,di){
+        const meta=chart.getDatasetMeta(di);
+        if(meta.hidden) return;
+        meta.data.forEach(function(pt,i){
+          const v=dsx.data[i]; if(v==null||v===0||!pt) return;
+          ctx.fillStyle=dsx.borderColor;
+          ctx.fillText(fmt(v), pt.x, pt.y-7);
+        });
+      });
+      ctx.restore();
+    }
+  };
+}
 function renderIndustry(){
   const body=document.getElementById('indBody');
   if(!body) return;
@@ -3448,24 +3467,28 @@ function renderIndustry(){
   if(charts.indRevYear) charts.indRevYear.destroy();
   charts.indRevYear=new Chart(document.getElementById('chartIndRevYear'),{ type:'line',
     data:{labels:labels, datasets:ds(rev, function(n){return fcRev[n];})},
-    options:opts(function(v){return fmtEurShort(v);}, function(v){return fmtEur(v);}) });
+    options:opts(function(v){return fmtEurShort(v);}, function(v){return fmtEur(v);}),
+    plugins:[indPointLabels(function(v){return fmtEurShort(v);})] });
   // 2) Marktaandeel (100% gestapelde vlakken)
   if(charts.indShare) charts.indShare.destroy();
   const shareFc=function(n){ return [ totFc[0]? +(fcRev[n][0]/totFc[0]*100).toFixed(1):0, totFc[1]? +(fcRev[n][1]/totFc[1]*100).toFixed(1):0 ]; };
   charts.indShare=new Chart(document.getElementById('chartIndShare'),{ type:'line',
     data:{labels:labels, datasets:ds(share, shareFc, true)},
-    options:opts(function(v){return v+'%';}, function(v){return v.toFixed(1)+'%';}, true, 100) });
+    options:opts(function(v){return v+'%';}, function(v){return v.toFixed(1)+'%';}, true, 100),
+    plugins:[indPointLabels(function(v){return Math.round(v)+'%';})] });
   // 3) Aantal orders
   if(charts.indOrdYear) charts.indOrdYear.destroy();
   charts.indOrdYear=new Chart(document.getElementById('chartIndOrdYear'),{ type:'line',
     data:{labels:labels, datasets:ds(ord, function(n){return fcOrd[n];})},
-    options:opts(function(v){return fmtNum(v);}, function(v){return fmtNum(v)+' orders';}) });
+    options:opts(function(v){return fmtNum(v);}, function(v){return fmtNum(v)+' orders';}),
+    plugins:[indPointLabels(function(v){return fmtNum(v);})] });
   // 4) Gemiddelde orderwaarde
   if(charts.indAov) charts.indAov.destroy();
   const aovFc=function(n){ return [ fcOrd[n][0]? Math.round(fcRev[n][0]/fcOrd[n][0]):0, fcOrd[n][1]? Math.round(fcRev[n][1]/fcOrd[n][1]):0 ]; };
   charts.indAov=new Chart(document.getElementById('chartIndAov'),{ type:'line',
     data:{labels:labels, datasets:ds(aov, aovFc)},
-    options:opts(function(v){return fmtEurShort(v);}, function(v){return fmtEur(v);}) });
+    options:opts(function(v){return fmtEurShort(v);}, function(v){return fmtEur(v);}),
+    plugins:[indPointLabels(function(v){return fmtEurShort(v);})] });
   setTimeout(function(){ Object.values(charts).forEach(function(c){ c&&c.resize&&c.resize(); }); },30);
 }
 
