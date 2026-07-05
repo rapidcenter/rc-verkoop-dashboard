@@ -591,13 +591,34 @@
       <div class="ind-progress-note">Eenmalig per klant &mdash; daarna gecached en vrijwel instant.</div>
     </div>
     <div id="indBody" style="display:none">
+      <div class="ind-toolbar" style="display:flex;flex-wrap:wrap;align-items:center;gap:16px;margin-bottom:16px">
+        <div class="ind-modebar" style="display:flex;gap:8px">
+          <button id="indModeYtd" class="yr-btn active" type="button" onclick="setIndMode('ytd')">YTD</button>
+          <button id="indModeYear" class="yr-btn" type="button" onclick="setIndMode('year')">Per jaar</button>
+        </div>
+        <div class="abc-tabbar">
+          <button id="indAbc_all" class="abc-tab-btn active" type="button" onclick="setIndAbc('all')">Alle</button>
+          <button id="indAbc_A" class="abc-tab-btn" type="button" onclick="setIndAbc('A')">A-accounts</button>
+          <button id="indAbc_B" class="abc-tab-btn" type="button" onclick="setIndAbc('B')">B-accounts</button>
+          <button id="indAbc_C" class="abc-tab-btn" type="button" onclick="setIndAbc('C')">C-accounts</button>
+        </div>
+        <div id="indFilter" style="display:flex;flex-wrap:wrap;gap:6px"></div>
+      </div>
       <div class="chart-box" style="margin-bottom:16px">
-        <div class="chart-title"><span>Omzet per industrie &mdash; per jaar</span><span class="sub">NET &euro; &middot; klik in de legenda om een industrie te verbergen</span></div>
+        <div class="chart-title"><span id="indT1">Omzet per industrie</span><span class="sub">NET &euro;</span></div>
         <div class="chart-canvas-wrap tall"><canvas id="chartIndRevYear"></canvas></div>
       </div>
       <div class="chart-box" style="margin-bottom:16px">
-        <div class="chart-title"><span>Aantal orders per industrie &mdash; per jaar</span><span class="sub">Aantal orders &middot; klik in de legenda om te filteren</span></div>
+        <div class="chart-title"><span id="indT2">Marktaandeel per industrie</span><span class="sub">% van totale omzet &middot; 100% gestapeld</span></div>
+        <div class="chart-canvas-wrap tall"><canvas id="chartIndShare"></canvas></div>
+      </div>
+      <div class="chart-box" style="margin-bottom:16px">
+        <div class="chart-title"><span id="indT3">Aantal orders per industrie</span><span class="sub">Aantal orders</span></div>
         <div class="chart-canvas-wrap tall"><canvas id="chartIndOrdYear"></canvas></div>
+      </div>
+      <div class="chart-box" style="margin-bottom:16px">
+        <div class="chart-title"><span id="indT4">Gemiddelde orderwaarde per industrie</span><span class="sub">NET &euro; per order</span></div>
+        <div class="chart-canvas-wrap tall"><canvas id="chartIndAov"></canvas></div>
       </div>
     </div>
   </section>
@@ -3257,15 +3278,17 @@ function computeIndustryAgg(){
   const map=loadIndustryCache();
   const cutoff=DATA.ytd_day_of_year || 366;
   const cur=DATA.current_year;
+  const abc = window.__indAbc || 'all';   // A/B/C-accountfilter
   const agg={};
   (DATA.all_orders||[]).forEach(function(o){
+    if(abc!=='all' && accountClassOf(o.client)!==abc) return;
     let nm = normalizeIndustry((o.cust && map[String(o.cust)]) ? map[String(o.cust)] : '');
     if(!nm) nm='Onbekend';
-    if(!agg[nm]) agg[nm]={full:{}, ytd:{}, ord:{}, clients:{}};
+    if(!agg[nm]) agg[nm]={full:{}, ytd:{}, ord:{}, ordYtd:{}, clients:{}};
     const a=agg[nm];
     a.full[o.y]=(a.full[o.y]||0)+o.rev;
-    if(dayOfYearYMD(o.y,o.m,o.d)<=cutoff){ a.ytd[o.y]=(a.ytd[o.y]||0)+o.rev; }
     a.ord[o.y]=(a.ord[o.y]||0)+1;
+    if(dayOfYearYMD(o.y,o.m,o.d)<=cutoff){ a.ytd[o.y]=(a.ytd[o.y]||0)+o.rev; a.ordYtd[o.y]=(a.ordYtd[o.y]||0)+1; }
     if(o.y===cur){ a.clients[o.client]=(a.clients[o.client]||0)+o.rev; }
   });
   return agg;
@@ -3305,57 +3328,103 @@ async function refreshIndustries(){
   await ensureIndustryLoaded();
 }
 
+function setIndMode(m){
+  window.__indMode = m;
+  const a=document.getElementById('indModeYtd'), b=document.getElementById('indModeYear');
+  if(a) a.classList.toggle('active', m==='ytd');
+  if(b) b.classList.toggle('active', m==='year');
+  renderIndustry();
+}
+function setIndAbc(cls){
+  window.__indAbc = cls;
+  ['all','A','B','C'].forEach(function(k){ const b=document.getElementById('indAbc_'+k); if(b) b.classList.toggle('active', k===cls); });
+  renderIndustry();
+}
+// Gedeelde sector-filterbalk: chips die alle charts tegelijk filteren
+function renderIndFilter(allNames){
+  const el=document.getElementById('indFilter'); if(!el) return;
+  const hidden=window.__indHidden;
+  el.innerHTML='';
+  allNames.forEach(function(n){
+    const c=indColor(n, allNames.indexOf(n));
+    const off=hidden.has(n);
+    const chip=document.createElement('button');
+    chip.type='button';
+    chip.style.cssText='display:inline-flex;align-items:center;gap:6px;padding:4px 11px;border-radius:999px;border:1px solid '+(off?'var(--border-2)':c)+';background:'+(off?'transparent':'rgba(255,255,255,.05)')+';color:'+(off?'var(--ink-4)':'var(--ink)')+';font:600 11px Roboto,system-ui,sans-serif;cursor:pointer;opacity:'+(off?'.55':'1');
+    chip.innerHTML='<span style="width:9px;height:9px;border-radius:50%;background:'+c+';display:inline-block'+(off?';filter:grayscale(1)':'')+'"></span>'+n;
+    chip.addEventListener('click',function(){ if(hidden.has(n)) hidden.delete(n); else hidden.add(n); renderIndustry(); });
+    el.appendChild(chip);
+  });
+}
 function renderIndustry(){
   const body=document.getElementById('indBody');
   if(!body) return;
   body.style.display='block';
+  const mode = window.__indMode || 'ytd';
+  const revKey = mode==='ytd' ? 'ytd' : 'full';
+  const ordKey = mode==='ytd' ? 'ordYtd' : 'ord';
+  window.__indHidden = window.__indHidden || new Set();
+  const hidden = window.__indHidden;
   const agg=computeIndustryAgg();
-  // jaren verzamelen uit alle industrieën
+  // jaren
   const yearSet=new Set();
-  Object.values(agg).forEach(function(a){
-    Object.keys(a.full).forEach(function(y){ yearSet.add(+y); });
-    Object.keys(a.ord).forEach(function(y){ yearSet.add(+y); });
-  });
+  Object.values(agg).forEach(function(a){ Object.keys(a.full).forEach(function(y){ yearSet.add(+y); }); Object.keys(a.ord).forEach(function(y){ yearSet.add(+y); }); });
   const years=Array.from(yearSet).sort(function(a,b){return a-b;});
   const labels=years.map(String);
-  // industrieën sorteren op totale omzet (Onbekend achteraan)
-  const totRev=function(n){ return years.reduce(function(s,y){return s+(agg[n].full[y]||0);},0); };
-  let names=Object.keys(agg);
-  names.sort(function(a,b){
+  // alle industrieën gesorteerd op totale omzet (gekozen modus); Onbekend achteraan
+  const totRev=function(n){ return years.reduce(function(s,y){return s+((agg[n][revKey][y])||0);},0); };
+  const allNames=Object.keys(agg).sort(function(a,b){
     if(a==='Onbekend' && b!=='Onbekend') return 1;
     if(b==='Onbekend' && a!=='Onbekend') return -1;
     return totRev(b)-totRev(a);
   });
-  function datasets(metric){
-    return names.map(function(n,i){ const c=indColor(n,i); return {
-      label:n,
-      data:years.map(function(y){ return Math.round((agg[n][metric][y])||0); }),
+  renderIndFilter(allNames);
+  const names=allNames.filter(function(n){ return !hidden.has(n); });
+  const colorOf=function(n){ return indColor(n, allNames.indexOf(n)); };
+  // totaal per jaar over ZICHTBARE industrieën (voor marktaandeel)
+  const totY={}; years.forEach(function(y){ totY[y]=names.reduce(function(s,n){return s+((agg[n][revKey][y])||0);},0); });
+  function lineDs(valFn){
+    return names.map(function(n){ const c=colorOf(n); return {
+      label:n, data:years.map(function(y){ return valFn(n,y); }),
       borderColor:c, backgroundColor:c, tension:.3, borderWidth:2.5,
       pointRadius:4, pointHoverRadius:7, pointBackgroundColor:c, fill:false }; });
   }
-  function opts(fmtAxis, fmtTip){
+  function opts(fmtAxis, fmtTip, stacked, ymax){
     return Object.assign({}, CD, {
       layout:{padding:{top:16,bottom:8,left:12,right:12}},
       plugins:Object.assign({}, CD.plugins, {
-        legend:{display:true, position:'top', align:'start', labels:{color:'#CFD2D3', font:{size:10.5,family:'Roboto'}, boxWidth:12, padding:9, usePointStyle:true}},
+        legend:{display:false},
         tooltip:Object.assign({}, CD.plugins.tooltip, {callbacks:{label:function(c){ return c.dataset.label+': '+fmtTip(c.parsed.y||0); }}})
       }),
       scales:{
         x:Object.assign({}, CD.scales.x, {ticks:Object.assign({}, CD.scales.x.ticks, {font:{size:13,weight:'600'}})}),
-        y:Object.assign({}, CD.scales.y, {beginAtZero:true, ticks:Object.assign({}, CD.scales.y.ticks, {callback:fmtAxis})})
+        y:Object.assign({}, CD.scales.y, {beginAtZero:true, stacked:!!stacked, max:(ymax||undefined), ticks:Object.assign({}, CD.scales.y.ticks, {callback:fmtAxis})})
       }
     });
   }
+  const suf = mode==='ytd' ? '— YTD (t/m zelfde dag)' : '— per volledig jaar';
+  const st=function(id,t){ const e=document.getElementById(id); if(e) e.textContent=t; };
+  st('indT1','Omzet per industrie '+suf);
+  st('indT2','Marktaandeel per industrie '+suf);
+  st('indT3','Aantal orders per industrie '+suf);
+  st('indT4','Gemiddelde orderwaarde per industrie '+suf);
+  const rev=function(n,y){ return Math.round((agg[n][revKey][y])||0); };
+  const ord=function(n,y){ return Math.round((agg[n][ordKey][y])||0); };
+  const aov=function(n,y){ const r=(agg[n][revKey][y])||0, o=(agg[n][ordKey][y])||0; return o? Math.round(r/o):0; };
+  const share=function(n,y){ const t=totY[y]; return t? +(((agg[n][revKey][y])||0)/t*100).toFixed(1):0; };
+  // 1) Omzet
   if(charts.indRevYear) charts.indRevYear.destroy();
-  charts.indRevYear=new Chart(document.getElementById('chartIndRevYear'),{
-    type:'line', data:{labels:labels, datasets:datasets('full')},
-    options:opts(function(v){return fmtEurShort(v);}, function(v){return fmtEur(v);})
-  });
+  charts.indRevYear=new Chart(document.getElementById('chartIndRevYear'),{ type:'line', data:{labels:labels, datasets:lineDs(rev)}, options:opts(function(v){return fmtEurShort(v);}, function(v){return fmtEur(v);}) });
+  // 2) Marktaandeel (100% gestapelde vlakken)
+  if(charts.indShare) charts.indShare.destroy();
+  const shareDs=lineDs(share).map(function(d){ d.fill=true; return d; });
+  charts.indShare=new Chart(document.getElementById('chartIndShare'),{ type:'line', data:{labels:labels, datasets:shareDs}, options:opts(function(v){return v+'%';}, function(v){return v.toFixed(1)+'%';}, true, 100) });
+  // 3) Aantal orders
   if(charts.indOrdYear) charts.indOrdYear.destroy();
-  charts.indOrdYear=new Chart(document.getElementById('chartIndOrdYear'),{
-    type:'line', data:{labels:labels, datasets:datasets('ord')},
-    options:opts(function(v){return fmtNum(v);}, function(v){return fmtNum(v)+' orders';})
-  });
+  charts.indOrdYear=new Chart(document.getElementById('chartIndOrdYear'),{ type:'line', data:{labels:labels, datasets:lineDs(ord)}, options:opts(function(v){return fmtNum(v);}, function(v){return fmtNum(v)+' orders';}) });
+  // 4) Gemiddelde orderwaarde
+  if(charts.indAov) charts.indAov.destroy();
+  charts.indAov=new Chart(document.getElementById('chartIndAov'),{ type:'line', data:{labels:labels, datasets:lineDs(aov)}, options:opts(function(v){return fmtEurShort(v);}, function(v){return fmtEur(v);}) });
   setTimeout(function(){ Object.values(charts).forEach(function(c){ c&&c.resize&&c.resize(); }); },30);
 }
 
