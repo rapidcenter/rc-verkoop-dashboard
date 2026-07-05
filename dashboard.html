@@ -2404,16 +2404,29 @@ async function amfgFetchRange(fromYear, toYearExcl, onProgress){
 }
 let AMFG_ACTIVE=false;
 let AMFG_LOADING=false;
+// Toont een aftelling met "Doorgaan zonder historie"-knop. Resolvet true als de
+// gebruiker klikt (historie overslaan), of false als de tijd verstrijkt (volledig laden).
+function askSkipHistory(sec){
+  return new Promise(function(resolve){
+    const btn=document.getElementById('skipHistBtn');
+    const cnt=document.getElementById('skipCount');
+    if(!btn){ resolve(false); return; }
+    let left=sec, done=false, t=null;
+    function finish(skip){ if(done) return; done=true; if(t) clearInterval(t); resolve(skip); }
+    btn.addEventListener('click', function(){ finish(true); });
+    t=setInterval(function(){ left--; if(cnt) cnt.textContent=left; if(left<=0) finish(false); }, 1000);
+  });
+}
 async function amfgAugment(){
   const yr = (DATA && DATA.current_year) ? DATA.current_year : new Date().getFullYear();
   const base=(ALL_ROWS && ALL_ROWS.length)?ALL_ROWS:[];
   // Is er al historie (Excel/embedded, jaren < huidig)? Zo niet (bookmarklet zonder
   // Excel), haal dan ook de laatste jaren live op zodat alle views werken.
   const haveHistory = base.some(function(r){ const d=new Date(r['ORDER DATE']); return !isNaN(d) && d.getFullYear() < yr; });
-  const fromYear = haveHistory ? yr : (yr-2);   // met Excel: alleen huidig jaar; anders 3 jaar live
+  const baseFromYear = haveHistory ? yr : (yr-2);   // met Excel: alleen huidig jaar; anders 3 jaar live
   const hasToken = (function(){ try{ return !!localStorage.getItem('accessToken'); }catch(e){ return false; } })();
-  const spanYears = Math.max(1, yr - fromYear + 1);
-  const estPages = Math.max(1, spanYears*15);   // ~15 pagina's (á 200) per jaar
+  let fromYear = baseFromYear;
+  let estPages = 15;
   const loadEl = document.getElementById('loading');
   const nd = document.getElementById('noDataOverlay');
   if(hasToken){
@@ -2426,10 +2439,25 @@ async function amfgAugment(){
         + '<div style="width:320px;max-width:72vw;height:10px;background:rgba(255,255,255,.15);border-radius:6px;overflow:hidden;margin:0 auto">'
         + '<div id="amfgBar" style="width:4%;height:100%;background:var(--rc-blue);transition:width .35s ease"></div></div>'
         + '<div id="amfgTxt" style="font-size:12px;letter-spacing:.02em;text-transform:none;color:var(--light-blue);margin-top:12px">verbinden met AMFG…</div>'
+        + '<div id="skipBox" style="margin-top:20px">'
+        +   '<button id="skipHistBtn" type="button" style="background:transparent;border:1px solid var(--rc-blue);color:var(--light-blue);border-radius:6px;padding:9px 18px;font:700 12px Roboto,system-ui,sans-serif;letter-spacing:.05em;text-transform:uppercase;cursor:pointer">Doorgaan zonder historie</button>'
+        +   '<div id="skipInfo" style="font-size:11px;color:var(--ink-3);margin-top:9px">Volledige historie (3 jaar) wordt over <b id="skipCount" style="color:var(--light-blue)">5</b> s opgehaald&hellip;</div>'
+        + '</div>'
         + '</div>';
       loadEl.classList.add('show');
     }
   }
+  // Optie: historie overslaan — 5s aftellen. Klik = alleen huidig jaar (snel);
+  // niets klikken = na 5s alsnog de volledige historie ophalen.
+  if(hasToken && baseFromYear < yr){
+    const skip = await askSkipHistory(5);
+    const t=document.getElementById('amfgTxt');
+    if(skip){ fromYear = yr; if(t) t.textContent='alleen huidig jaar laden…'; }
+    else if(t){ t.textContent='volledige historie laden…'; }
+  }
+  const sb=document.getElementById('skipBox'); if(sb) sb.style.display='none';
+  const spanYears = Math.max(1, yr - fromYear + 1);
+  estPages = Math.max(1, spanYears*15);   // ~15 pagina's (á 200) per jaar
   const onProg = function(fetched, pages){
     const bar=document.getElementById('amfgBar'), txt=document.getElementById('amfgTxt');
     const pct=Math.min(96, Math.round(pages/estPages*100));
