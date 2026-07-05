@@ -3471,7 +3471,7 @@ function renderIndustry(){
     if(showFc){ fcYears.forEach(function(y,k){ arr.push(String(y)+' ('+fcTot(k)+')'); }); }
     return arr;
   }
-  const labRev=mkLabels(function(y){return fmtEurShort(totY[y]||0);}, function(k){return fmtEurShort(totFc[k]||0);});
+  const labRev=mkLabels(function(y){return fmtEurK(totY[y]||0);}, function(k){return fmtEurK(totFc[k]||0);});
   const labOrd=mkLabels(function(y){return fmtNum(totOrdY[y]||0);}, function(k){return fmtNum(totOrdFc[k]||0);});
   const labShare=labRev;   // marktaandeel: absolute totaalomzet als context
   const labAov=mkLabels(function(y){return totOrdY[y]? fmtEurShort(Math.round(totY[y]/totOrdY[y])):'-';}, function(k){return totOrdFc[k]? fmtEurShort(Math.round(totFc[k]/totOrdFc[k])):'-';});
