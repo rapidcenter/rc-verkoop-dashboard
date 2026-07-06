@@ -372,8 +372,10 @@
   .recent-row .amount{font-family:'Roboto';font-weight:700;text-align:right;color:var(--text)}
   .orders-head,.orders-row{display:grid;grid-template-columns:90px 100px 1fr 140px 1fr 100px 100px 100px 100px 70px 60px 100px;gap:6px;align-items:center;padding:8px 12px;font-size:12px;caret-color:transparent}
   .orders-head>span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .orders-head.dm,.orders-row.dm{grid-template-columns:72px 56px 1.1fr 60px 1fr 64px 74px 66px 66px 36px 42px 72px;gap:3px;padding:6px 6px;font-size:10.5px}
-  .orders-row.dm .ticket,.orders-row.dm .notes{font-size:10px}
+  .orders-head.dm,.orders-row.dm{grid-template-columns:72px 92px 1.1fr 120px 1fr 64px 74px 66px 66px 36px 42px 72px;gap:3px;padding:6px 6px;font-size:10.5px}
+  .orders-row.dm .ticket{font-size:10px;white-space:nowrap;overflow:visible}
+  .orders-row.dm .notes{font-size:13px}
+  .orders-row.dm .status{white-space:nowrap}
   .orders-row.dm .client,.orders-row.dm .status,.orders-row.dm .notes{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .orders-head{background:var(--surface2);font-family:'Roboto';font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--white);font-weight:700;border-bottom:2px solid var(--rc-blue)}
   .orders-row{border-bottom:1px solid var(--border);color:var(--ink)}
