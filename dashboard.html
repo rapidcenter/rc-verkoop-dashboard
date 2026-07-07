@@ -2420,6 +2420,21 @@ function renderFilterBar(){
 const ALL_SECTORS=['Consumenten Goederen & Elektronica','Onderwijs','Industrieel','Medisch','Militair & Defensie & Ruimtevaart','Mobiliteit & Vervoer','Producent','Orthotic and prosthetic devices','Unmanned Aerial Vehicles (drones)','Particulier','Onbekend'];
 function setGlobalAcc(letter){ ACCOUNT_FILTER = (letter==='all') ? null : letter; reapplyFilters(); renderGlobalFilterBar(); }
 function setGlobalIndLoading(on){ const e=document.getElementById('gfIndLoading'); if(e) e.style.display=on?'inline':'none'; }
+// Duidelijk voortgangsscherm tijdens de eenmalige sector-ophaalslag (hergebruikt de AMFG-overlay)
+function showSectorLoading(done,total){
+  const el=document.getElementById('loading'); if(!el) return;
+  const pct = total ? Math.max(4, Math.round(done/total*100)) : 8;
+  el.innerHTML =
+    '<div style="text-align:center">'
+    + '<div style="font-size:15px;font-weight:700;letter-spacing:.06em;color:#fff;margin-bottom:14px">SECTOR-INDELING LADEN…</div>'
+    + '<div style="width:320px;max-width:72vw;height:10px;background:rgba(255,255,255,.15);border-radius:6px;overflow:hidden;margin:0 auto">'
+    +   '<div style="width:'+pct+'%;height:100%;background:var(--rc-blue);transition:width .3s ease"></div></div>'
+    + '<div style="font-size:12px;color:var(--light-blue);margin-top:12px">'+done.toLocaleString('nl-NL')+' / '+total.toLocaleString('nl-NL')+' klanten</div>'
+    + '<div style="font-size:11px;color:var(--ink-3);margin-top:6px">eenmalig ophalen &mdash; daarna filtert elke sector direct</div>'
+    + '</div>';
+  el.classList.add('show');
+}
+function hideSectorLoading(){ const el=document.getElementById('loading'); if(el) el.classList.remove('show'); }
 function setGlobalSectorAll(){ INDUSTRY_ONLY=null; reapplyFilters(); renderGlobalFilterBar(); }
 async function setGlobalSector(name){
   INDUSTRY_ONLY = (INDUSTRY_ONLY===name) ? null : name;   // klik = alleen deze sector; nogmaals = alle
@@ -2430,8 +2445,10 @@ async function setGlobalSector(name){
     const missing = (typeof uniqueCustomerIds==='function' && INDUSTRY_MAP) ? uniqueCustomerIds().filter(function(id){ return !(id in INDUSTRY_MAP); }) : [];
     if(missing.length && !INDUSTRY_LOADING){
       INDUSTRY_LOADING=true; setGlobalIndLoading(true);
-      try{ await amfgFetchIndustries(function(){}); }catch(e){}
+      showSectorLoading(0, missing.length);
+      try{ await amfgFetchIndustries(function(done,total){ showSectorLoading(done,total); }); }catch(e){}
       INDUSTRY_LOADING=false; setGlobalIndLoading(false);
+      hideSectorLoading();
     }
   }
   reapplyFilters();
