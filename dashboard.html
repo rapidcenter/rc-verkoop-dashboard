@@ -508,7 +508,6 @@
     <span id="updateInfo"></span>
     <span id="b-growth"></span><span id="b-period"></span><span id="b-rev"></span>
     <span class="upload-info" id="fileNameLbl"></span>
-    <button id="soundToggleBtn" onclick="toggleOrderSound()" type="button">&#128276;</button>
     <button class="upload-btn" onclick="pickAndProcessFile()" type="button">Excel</button>
     <input type="file" id="fileInput" accept=".xlsx,.xls" onchange="handleFile(this)">
     <button id="disconnectBtn" onclick="disconnectFile()" type="button">ontkoppel</button>
@@ -3321,7 +3320,6 @@ function refreshDashboard(){
   if(!baseDataLoaded()){ showFilterEmpty(false); renderPipeline(); return; }  // echt geen AMFG-data
   if(!hasData()){ showFilterEmpty(true); return; }                            // wel data, maar filter = 0 orders
   showFilterEmpty(false);
-  checkForNewOrders();
   renderBadges(); renderThisMonth(); renderKPIs(); renderClients(); renderCmpTable(); renderInsights(); renderChurnKPIs(); renderOrders(); renderPyramid();
   initCharts(); renderLast6Chart();
   renderPipeline();
@@ -3641,94 +3639,6 @@ function renderIndustry(){
     options:opts(function(v){return fmtEurShort(v);}, function(v){return fmtEur(v);}),
     plugins:[indPointLabels(function(v){return fmtEurShort(v);})] });
   setTimeout(function(){ Object.values(charts).forEach(function(c){ c&&c.resize&&c.resize(); }); },30);
-}
-
-// === Cash-register geluid bij binnenkomst nieuwe orders ===
-let _seenOrderIds = null; // Set; null = nog niet geinitialiseerd (eerste load, geen geluid)
-let _orderSoundEnabled = (function(){ try { return localStorage.getItem('rc_orderSound') !== 'off'; } catch(e){ return true; } })();
-
-function updateSoundBtnUI(){
-  const b = document.getElementById('soundToggleBtn');
-  if(!b) return;
-  b.textContent = _orderSoundEnabled ? '🔔' : '🔕'; // 🔔 / 🔕
-  b.style.color = _orderSoundEnabled ? 'var(--rc-blue)' : 'var(--ink-3)';
-  b.style.borderColor = _orderSoundEnabled ? 'var(--rc-blue)' : 'var(--border-2)';
-  b.title = _orderSoundEnabled ? 'Geluid AAN bij nieuwe orders — klik om uit te zetten' : 'Geluid UIT — klik om aan te zetten';
-}
-
-function toggleOrderSound(){
-  _orderSoundEnabled = !_orderSoundEnabled;
-  try { localStorage.setItem('rc_orderSound', _orderSoundEnabled ? 'on' : 'off'); } catch(e){}
-  updateSoundBtnUI();
-  if(_orderSoundEnabled) playOrderSound(); // demo zodat user hoort dat het werkt
-}
-
-function checkForNewOrders(){
-  const orders = DATA.recent_orders || [];
-  const currentIds = new Set(orders.map(function(o){ return o.project || (o.date+'|'+o.client+'|'+o.gross); }));
-  if(_seenOrderIds === null){
-    // Eerste keer dat we orders zien — initialiseren, geen geluid
-    _seenOrderIds = currentIds;
-    return;
-  }
-  let newCount = 0;
-  currentIds.forEach(function(id){ if(!_seenOrderIds.has(id)) newCount++; });
-  if(newCount > 0 && _orderSoundEnabled){
-    playOrderSound();
-  }
-  _seenOrderIds = currentIds;
-}
-
-// "Cha-ching" / cash register notificatie via Web Audio API — geen externe assets nodig
-function playOrderSound(){
-  try {
-    const AC = window.AudioContext || window.webkitAudioContext;
-    if(!AC) return;
-    const ctx = new AC();
-    const now = ctx.currentTime;
-
-    // Bell 1 — hoge tone
-    function bell(freq, startT, dur, vol){
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.type = 'triangle';
-      osc.frequency.value = freq;
-      // harmonische voor "bell" timbre
-      const osc2 = ctx.createOscillator();
-      osc2.type = 'sine';
-      osc2.frequency.value = freq * 2.01;
-      const gain2 = ctx.createGain();
-      gain2.gain.value = vol * 0.35;
-      osc2.connect(gain2).connect(ctx.destination);
-      osc.connect(gain).connect(ctx.destination);
-      gain.gain.setValueAtTime(0, startT);
-      gain.gain.linearRampToValueAtTime(vol, startT + 0.005);
-      gain.gain.exponentialRampToValueAtTime(0.0001, startT + dur);
-      gain2.gain.setValueAtTime(0, startT);
-      gain2.gain.linearRampToValueAtTime(vol*0.35, startT + 0.005);
-      gain2.gain.exponentialRampToValueAtTime(0.0001, startT + dur);
-      osc.start(startT); osc.stop(startT + dur);
-      osc2.start(startT); osc2.stop(startT + dur);
-    }
-    // Klassieke "ka-ching" — eerste hogere ting, gevolgd door iets lagere ting
-    bell(1318, now,        0.55, 0.22);  // E6
-    bell(1568, now + 0.02, 0.45, 0.16);  // G6 harmonic
-    bell(987,  now + 0.18, 0.70, 0.18);  // B5 (lager, langer)
-    // Subtiele "kassa-lade" hit
-    const noise = ctx.createBufferSource();
-    const buf = ctx.createBuffer(1, ctx.sampleRate * 0.08, ctx.sampleRate);
-    const data = buf.getChannelData(0);
-    for(let i=0;i<data.length;i++) data[i] = (Math.random()*2-1) * (1 - i/data.length) * 0.4;
-    noise.buffer = buf;
-    const ng = ctx.createGain();
-    ng.gain.value = 0.08;
-    const nf = ctx.createBiquadFilter();
-    nf.type = 'lowpass'; nf.frequency.value = 800;
-    noise.connect(nf).connect(ng).connect(ctx.destination);
-    noise.start(now + 0.16);
-    // Sluit context af na geluid
-    setTimeout(function(){ try { ctx.close(); } catch(e){} }, 1200);
-  } catch(e){ /* stil falen — audio is non-essentieel */ }
 }
 
 
@@ -4415,7 +4325,6 @@ window.addEventListener('DOMContentLoaded', async function(){
   initABSlider();
   initAutoRefresh();
   vkSetupHeader();
-  updateSoundBtnUI();
 });
 </script>
 </body>
