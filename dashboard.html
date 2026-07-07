@@ -2427,6 +2427,8 @@ function renderFilterBar(){
 }
 // === Globale filterbalk: A/B/C-accounts + industrie-sectoren, filtert het HELE dashboard ===
 const ALL_SECTORS=['Consumenten Goederen & Elektronica','Onderwijs','Industrieel','Medisch','Militair & Defensie & Ruimtevaart','Mobiliteit & Vervoer','Producent','Orthotic and prosthetic devices','Unmanned Aerial Vehicles (drones)','Particulier','Onbekend'];
+// Sectoren die we standaard NIET als filterknop tonen (worden toch niet gebruikt).
+const HIDDEN_SECTORS=['Particulier','Onbekend'];
 function setGlobalAcc(letter){ ACCOUNT_FILTER = (letter==='all') ? null : letter; reapplyFilters(); renderGlobalFilterBar(); }
 function setGlobalIndLoading(on){ const e=document.getElementById('gfIndLoading'); if(e) e.style.display=on?'inline':'none'; }
 // Duidelijk voortgangsscherm tijdens de eenmalige sector-ophaalslag (hergebruikt de AMFG-overlay)
@@ -2486,7 +2488,8 @@ function renderGlobalFilterBar(){
   // Alleen sectoren MET orders tonen (zodra de industrie-cache geladen is). Is de cache nog
   // niet geladen, dan tonen we alles zodat een klik de lazy-load kan starten.
   const present = sectorsWithOrders();
-  const shownSectors = present ? ALL_SECTORS.filter(function(n){ return present.has(n) || n===INDUSTRY_ONLY; }) : ALL_SECTORS;
+  const shownSectors = (present ? ALL_SECTORS.filter(function(n){ return present.has(n) || n===INDUSTRY_ONLY; }) : ALL_SECTORS)
+    .filter(function(n){ return HIDDEN_SECTORS.indexOf(n)<0; });   // Particulier/Onbekend altijd verbergen
   shownSectors.forEach(function(n){
     const c=indColor(n, ALL_SECTORS.indexOf(n));   // stabiele kleur o.b.v. originele index
     const sel = (INDUSTRY_ONLY===n);
