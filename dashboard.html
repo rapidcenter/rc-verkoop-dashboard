@@ -466,6 +466,15 @@
   </div>
 </div>
 
+<div id="filterEmptyOverlay" class="no-data-overlay" style="display:none">
+  <div class="no-data-card">
+    <div class="no-data-icon">📭</div>
+    <h2>Geen orders in deze selectie</h2>
+    <p id="filterEmptyMsg">Er zijn geen orders gevonden voor deze selectie in de geladen periode.</p>
+    <button type="button" onclick="clearGlobalFilters()" style="background:var(--rc-blue);color:#fff;border:none;border-radius:6px;padding:14px 28px;font-weight:700;letter-spacing:.05em;cursor:pointer;font-family:'Roboto'">Toon alles</button>
+  </div>
+</div>
+
 
 <div class="navbar">
   <div class="brand">
@@ -3105,11 +3114,27 @@ function processExcelData(rows, fileName){
 }
 
 function hasData(){ return DATA && DATA.recent_orders && DATA.recent_orders.length > 0; }
+// Basisdata aanwezig? (ongefilterde dataset / actieve AMFG-sessie). Zo ja, dan is een
+// leeg resultaat het gevolg van een FILTER — niet van "geen AMFG-sessie".
+function baseDataLoaded(){ return (typeof ALL_ROWS!=='undefined' && ALL_ROWS && ALL_ROWS.length>0) || (typeof AMFG_ACTIVE!=='undefined' && AMFG_ACTIVE); }
 function updateNoDataOverlay(){
   const ov = document.getElementById('noDataOverlay');
   if(!ov) return;
   if(typeof AMFG_LOADING !== 'undefined' && AMFG_LOADING){ ov.style.display='none'; return; }
-  ov.style.display = hasData() ? 'none' : 'flex';
+  // Login-scherm alleen tonen als er ECHT geen data is (geen AMFG-sessie), niet bij een lege filter-selectie.
+  ov.style.display = (baseDataLoaded() || hasData()) ? 'none' : 'flex';
+}
+function showFilterEmpty(on){
+  const ov=document.getElementById('filterEmptyOverlay'); if(!ov) return;
+  if(on){
+    const parts=[];
+    if(typeof INDUSTRY_ONLY!=='undefined' && INDUSTRY_ONLY) parts.push('sector "'+INDUSTRY_ONLY+'"');
+    if(typeof ACCOUNT_FILTER!=='undefined' && ACCOUNT_FILTER) parts.push(ACCOUNT_FILTER+'-accounts');
+    if(typeof CLIENT_FILTER!=='undefined' && CLIENT_FILTER) parts.push('klant "'+CLIENT_FILTER+'"');
+    const msg=document.getElementById('filterEmptyMsg');
+    if(msg) msg.textContent='Geen orders gevonden voor '+(parts.join(' + ')||'deze selectie')+' in de geladen periode.';
+  }
+  ov.style.display = on ? 'flex' : 'none';
 }
 
 // =================== WERKSTROOM-STROOK (open orders pipeline) ===================
@@ -3274,7 +3299,9 @@ function renderPipeline(){
 function refreshDashboard(){
   updateNoDataOverlay();
   renderGlobalFilterBar();
-  if(!hasData()){ renderPipeline(); return; }
+  if(!baseDataLoaded()){ showFilterEmpty(false); renderPipeline(); return; }  // echt geen AMFG-data
+  if(!hasData()){ showFilterEmpty(true); return; }                            // wel data, maar filter = 0 orders
+  showFilterEmpty(false);
   checkForNewOrders();
   renderBadges(); renderThisMonth(); renderKPIs(); renderClients(); renderCmpTable(); renderInsights(); renderChurnKPIs(); renderOrders(); renderPyramid();
   initCharts(); renderLast6Chart();
