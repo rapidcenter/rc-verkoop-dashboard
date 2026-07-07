@@ -3449,7 +3449,7 @@ async function ensureIndustryLoaded(){
   document.querySelectorAll('#tab-industrie .ind-yr').forEach(function(e){ e.textContent=DATA.current_year||''; });
   if(INDUSTRY_LOADING) return;
   const missing=uniqueCustomerIds().filter(function(id){ return !(id in INDUSTRY_MAP); });
-  if(missing.length===0){ INDUSTRY_LOADED=true; hideIndProgress(); renderIndustry(); return; }
+  if(missing.length===0){ INDUSTRY_LOADED=true; hideIndProgress(); renderIndustry(); renderGlobalFilterBar(); return; }
   INDUSTRY_LOADING=true;
   showIndProgress(0, missing.length);
   try{ await amfgFetchIndustries(function(done,total){ showIndProgress(done,total); }); }
@@ -3457,6 +3457,7 @@ async function ensureIndustryLoaded(){
   INDUSTRY_LOADING=false; INDUSTRY_LOADED=true;
   hideIndProgress();
   renderIndustry();
+  renderGlobalFilterBar();   // filterbalk verversen: sectoren zonder orders vallen nu weg / erbij
 }
 
 // Handmatig verversen: cache legen en opnieuw ophalen
