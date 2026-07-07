@@ -2463,6 +2463,16 @@ async function setGlobalSector(name){
   reapplyFilters();
 }
 function clearGlobalFilters(){ ACCOUNT_FILTER=null; INDUSTRY_ONLY=null; CLIENT_FILTER=null; reapplyFilters(); renderGlobalFilterBar(); }
+// Welke sectoren hebben minstens 1 order in de (ongefilterde) dataset? null = cache nog niet
+// geladen → toon alle chips (zodat een klik de industrie-load kan starten).
+function sectorsWithOrders(){
+  if(typeof ALL_ROWS==='undefined' || !ALL_ROWS || !ALL_ROWS.length) return null;
+  try{ loadIndustryCache(); }catch(e){}
+  if(!INDUSTRY_MAP || Object.keys(INDUSTRY_MAP).length===0) return null;
+  const set=new Set();
+  ALL_ROWS.forEach(function(r){ set.add(industryOfRow(r)); });
+  return set;
+}
 function renderGlobalFilterBar(){
   const el=document.getElementById('globalFilter'); if(!el) return;
   if(!hasData()){ el.style.display='none'; return; }
@@ -2473,8 +2483,12 @@ function renderGlobalFilterBar(){
     '<span class="gf-sep"></span><span class="gf-chips">';
   // "Alle sectoren"-chip
   html+='<button type="button" class="gf-chip gf-all'+(!INDUSTRY_ONLY?' active':'')+'" onclick="setGlobalSectorAll()">Alle sectoren</button>';
-  ALL_SECTORS.forEach(function(n,i){
-    const c=indColor(n,i);
+  // Alleen sectoren MET orders tonen (zodra de industrie-cache geladen is). Is de cache nog
+  // niet geladen, dan tonen we alles zodat een klik de lazy-load kan starten.
+  const present = sectorsWithOrders();
+  const shownSectors = present ? ALL_SECTORS.filter(function(n){ return present.has(n) || n===INDUSTRY_ONLY; }) : ALL_SECTORS;
+  shownSectors.forEach(function(n){
+    const c=indColor(n, ALL_SECTORS.indexOf(n));   // stabiele kleur o.b.v. originele index
     const sel = (INDUSTRY_ONLY===n);
     const off = (INDUSTRY_ONLY && !sel);   // andere sectoren dimmen zodra er één gekozen is
     html+='<button type="button" class="gf-chip'+(off?' off':'')+(sel?' sel':'')+'" onclick="setGlobalSector(\''+n.replace(/\x27/g,"\\\x27")+'\')" style="border-color:'+(off?'var(--border-2)':c)+'"><span class="gf-dot" style="background:'+c+'"></span>'+n+'</button>';
