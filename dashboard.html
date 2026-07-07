@@ -107,6 +107,18 @@
   #liveBanner.is-stale .dot{background:var(--red);animation:none}
   @keyframes rcPulse{0%,100%{opacity:1}50%{opacity:.3}}
   @media(max-width:820px){#rcActions .row2{display:none}}
+  .global-filter{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:10px 24px;background:#002B49;border-bottom:1px solid var(--border)}
+  .global-filter .gf-lbl{font:700 10px 'Roboto';letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-right:2px}
+  .global-filter .gf-acc-group{display:flex;gap:4px}
+  .global-filter .gf-acc{background:transparent;border:1px solid var(--border-2);color:var(--ink-2);border-radius:999px;padding:4px 12px;font:700 11px 'Roboto';cursor:pointer}
+  .global-filter .gf-acc.active{background:var(--rc-blue);border-color:var(--rc-blue);color:#fff}
+  .global-filter .gf-sep{width:1px;height:20px;background:var(--border-2);margin:0 4px}
+  .global-filter .gf-chips{display:flex;flex-wrap:wrap;gap:5px}
+  .global-filter .gf-chip{display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.05);border:1px solid var(--rc-blue);color:var(--ink);border-radius:999px;padding:3px 10px;font:600 11px 'Roboto';cursor:pointer}
+  .global-filter .gf-chip.off{opacity:.5;color:var(--ink-4);background:transparent;border-color:var(--border-2)}
+  .global-filter .gf-chip .gf-dot{width:9px;height:9px;border-radius:50%;display:inline-block}
+  .global-filter .gf-chip.off .gf-dot{filter:grayscale(1)}
+  .global-filter .gf-reset{margin-left:auto;background:var(--rc-blue);color:#fff;border:0;border-radius:999px;padding:4px 12px;font:700 11px 'Roboto';cursor:pointer}
   main{padding:20px 24px;max-width:none}
   .tab-section{display:none}
   .tab-section.active{display:block;animation:fadeIn .25s ease}
@@ -504,6 +516,8 @@
   <button class="tab-btn" onclick="switchTab('klantverloop',this)">Klantverloop</button>
 </div>
 
+<div class="global-filter" id="globalFilter" style="display:none"></div>
+
 <div class="client-filter-bar" id="clientFilterBar" style="display:none"></div>
 
 <div class="filterbar" id="filterbar" style="display:none">
@@ -599,13 +613,7 @@
           <button id="indModeYear" class="yr-btn" type="button" onclick="setIndMode('year')">Per jaar</button>
           <button id="indFcBtn" class="yr-btn active" type="button" onclick="setIndFc()" title="Prognose 2 jaar o.b.v. historische groei">&#128200; Prognose 2 jr</button>
         </div>
-        <div class="abc-tabbar">
-          <button id="indAbc_all" class="abc-tab-btn active" type="button" onclick="setIndAbc('all')">Alle</button>
-          <button id="indAbc_A" class="abc-tab-btn" type="button" onclick="setIndAbc('A')">A-accounts</button>
-          <button id="indAbc_B" class="abc-tab-btn" type="button" onclick="setIndAbc('B')">B-accounts</button>
-          <button id="indAbc_C" class="abc-tab-btn" type="button" onclick="setIndAbc('C')">C-accounts</button>
-        </div>
-        <div id="indFilter" style="display:flex;flex-wrap:wrap;gap:6px"></div>
+        <span style="font-size:11px;color:var(--ink-3)">Filter A/B/C &amp; sectoren via de balk bovenaan het dashboard</span>
       </div>
       <div class="chart-box" style="margin-bottom:16px">
         <div class="chart-title"><span id="indT1">Omzet per industrie</span><span class="sub">NET &euro;</span></div>
@@ -2344,12 +2352,21 @@ let ALL_ROWS = null;          // ongefilterde rijen van de laatst geladen Excel
 let LAST_FILENAME = '';
 let CLIENT_FILTER = null;     // klantnaam of null
 let ACCOUNT_FILTER = null;    // 'A' | 'B' | 'C' of null
+let INDUSTRY_HIDDEN = new Set(); // verborgen sectoren (globaal filter)
 let FULL_ACCOUNT_STATUS = {}; // A/B/C-classificatie bepaald op de VOLLEDIGE dataset
 function clientKeyOf(r){ return String(r['CUSTOMER COMPANY']||r['BILLING COMPANY']||'Onbekend').trim(); }
+// sector van een ruwe orderrij (via de AMFG-klantkaart-industrie, genormaliseerd)
+function industryOfRow(r){
+  if(!INDUSTRY_MAP){ try{ loadIndustryCache(); }catch(e){} }
+  const id=r['CUSTOMER ID'];
+  const nm=(id!=null && INDUSTRY_MAP && INDUSTRY_MAP[String(id)]) ? INDUSTRY_MAP[String(id)] : '';
+  return normalizeIndustry(nm);
+}
 function applyActiveRowFilters(rows){
   let out = rows;
   if(CLIENT_FILTER) out = out.filter(function(r){ return clientKeyOf(r) === CLIENT_FILTER; });
   if(ACCOUNT_FILTER) out = out.filter(function(r){ return (FULL_ACCOUNT_STATUS[clientKeyOf(r)] || 'C') === ACCOUNT_FILTER; });
+  if(INDUSTRY_HIDDEN.size) out = out.filter(function(r){ return !INDUSTRY_HIDDEN.has(industryOfRow(r)); });
   return out;
 }
 function processWithFilter(rows, fileName){
@@ -2363,7 +2380,7 @@ function reapplyFilters(){
   processExcelData(ALL_ROWS, LAST_FILENAME);
   FULL_ACCOUNT_STATUS = Object.assign({}, DATA.account_status);
   // 2) als er een filter actief is: opnieuw verwerken op de gefilterde subset
-  if(CLIENT_FILTER || ACCOUNT_FILTER){
+  if(CLIENT_FILTER || ACCOUNT_FILTER || INDUSTRY_HIDDEN.size){
     processExcelData(applyActiveRowFilters(ALL_ROWS), LAST_FILENAME);
   }
   renderFilterBar();
@@ -2397,6 +2414,40 @@ function renderFilterBar(){
     chips.join('<span class="cfb-plus">+</span>')+
     '<span class="cfb-meta">'+orders+' lopende orders</span>'+
     '<button class="cfb-clear" onclick="clearAllFilters()" title="Alle filters wissen">&times; Toon alles</button>';
+}
+// === Globale filterbalk: A/B/C-accounts + industrie-sectoren, filtert het HELE dashboard ===
+const ALL_SECTORS=['Consumenten Goederen & Elektronica','Onderwijs','Industrieel','Medisch','Militair & Defensie & Ruimtevaart','Mobiliteit & Vervoer','Producent','Orthotic and prosthetic devices','Unmanned Aerial Vehicles (drones)','Particulier','Onbekend'];
+function setGlobalAcc(letter){ ACCOUNT_FILTER = (letter==='all') ? null : letter; reapplyFilters(); renderGlobalFilterBar(); }
+function setGlobalIndLoading(on){ const e=document.getElementById('gfIndLoading'); if(e) e.style.display=on?'inline':'none'; }
+async function toggleGlobalSector(name){
+  if(INDUSTRY_HIDDEN.has(name)) INDUSTRY_HIDDEN.delete(name); else INDUSTRY_HIDDEN.add(name);
+  renderGlobalFilterBar();
+  // industrie-map nodig om rijen op sector te filteren — indien nog niet volledig: ophalen
+  try{ loadIndustryCache(); }catch(e){}
+  const missing = (typeof uniqueCustomerIds==='function' && INDUSTRY_MAP) ? uniqueCustomerIds().filter(function(id){ return !(id in INDUSTRY_MAP); }) : [];
+  if(missing.length && !INDUSTRY_LOADING){
+    INDUSTRY_LOADING=true; setGlobalIndLoading(true);
+    try{ await amfgFetchIndustries(function(){}); }catch(e){}
+    INDUSTRY_LOADING=false; setGlobalIndLoading(false);
+  }
+  reapplyFilters();
+}
+function clearGlobalFilters(){ ACCOUNT_FILTER=null; INDUSTRY_HIDDEN=new Set(); CLIENT_FILTER=null; reapplyFilters(); renderGlobalFilterBar(); }
+function renderGlobalFilterBar(){
+  const el=document.getElementById('globalFilter'); if(!el) return;
+  if(!hasData()){ el.style.display='none'; return; }
+  el.style.display='flex';
+  const accBtn=function(k,lbl){ const act=(k==='all')? !ACCOUNT_FILTER : (ACCOUNT_FILTER===k); return '<button type="button" class="gf-acc'+(act?' active':'')+'" onclick="setGlobalAcc(\''+k+'\')">'+lbl+'</button>'; };
+  let html='<span class="gf-lbl">Filter</span>'+
+    '<span class="gf-acc-group">'+accBtn('all','Alle')+accBtn('A','A')+accBtn('B','B')+accBtn('C','C')+'</span>'+
+    '<span class="gf-sep"></span><span class="gf-chips">';
+  ALL_SECTORS.forEach(function(n,i){
+    const c=indColor(n,i); const off=INDUSTRY_HIDDEN.has(n);
+    html+='<button type="button" class="gf-chip'+(off?' off':'')+'" onclick="toggleGlobalSector(\''+n.replace(/\x27/g,"\\\x27")+'\')" style="border-color:'+(off?'var(--border-2)':c)+'"><span class="gf-dot" style="background:'+c+'"></span>'+n+'</button>';
+  });
+  html+='</span><span id="gfIndLoading" style="display:none;color:var(--light-blue);font-size:11px;margin-left:6px">sectoren laden&hellip;</span>';
+  if(ACCOUNT_FILTER || INDUSTRY_HIDDEN.size || CLIENT_FILTER) html+='<button type="button" class="gf-reset" onclick="clearGlobalFilters()">&times; reset</button>';
+  el.innerHTML=html;
 }
 // === AMFG live-koppeling: orders van het lopende jaar same-origin ophalen op AMFG ===
 // Werkt alleen wanneer het dashboard op console.amfg.ai draait én je bent ingelogd
@@ -3179,6 +3230,7 @@ function renderPipeline(){
 
 function refreshDashboard(){
   updateNoDataOverlay();
+  renderGlobalFilterBar();
   if(!hasData()){ renderPipeline(); return; }
   checkForNewOrders();
   renderBadges(); renderThisMonth(); renderKPIs(); renderClients(); renderCmpTable(); renderInsights(); renderChurnKPIs(); renderOrders(); renderPyramid();
@@ -3281,10 +3333,8 @@ function computeIndustryAgg(){
   const map=loadIndustryCache();
   const cutoff=DATA.ytd_day_of_year || 366;
   const cur=DATA.current_year;
-  const abc = window.__indAbc || 'all';   // A/B/C-accountfilter
   const agg={};
   (DATA.all_orders||[]).forEach(function(o){
-    if(abc!=='all' && accountClassOf(o.client)!==abc) return;
     let nm = normalizeIndustry((o.cust && map[String(o.cust)]) ? map[String(o.cust)] : '');
     if(!nm) nm='Onbekend';
     if(!agg[nm]) agg[nm]={full:{}, ytd:{}, ord:{}, ordYtd:{}, clients:{}};
@@ -3391,8 +3441,6 @@ function renderIndustry(){
   const revKey = mode==='ytd' ? 'ytd' : 'full';
   const ordKey = mode==='ytd' ? 'ordYtd' : 'ord';
   const showFc = window.__indFc !== false;   // prognose aan (default)
-  window.__indHidden = window.__indHidden || new Set();
-  const hidden = window.__indHidden;
   const agg=computeIndustryAgg();
   const cur = DATA.current_year;
   // jaren
@@ -3412,8 +3460,7 @@ function renderIndustry(){
     if(b==='Onbekend' && a!=='Onbekend') return -1;
     return totRev(b)-totRev(a);
   });
-  renderIndFilter(allNames);
-  const names=allNames.filter(function(n){ return !hidden.has(n); });
+  const names=allNames;   // sector-filtering gebeurt globaal (op dataniveau)
   const colorOf=function(n){ return indColor(n, allNames.indexOf(n)); };
   // gemiddelde jaargroei (geometrisch, geklemd 0,5-2,0)
   function growthOf(arr){ const r=[]; for(let i=1;i<arr.length;i++){ if(arr[i-1]>0 && arr[i]>0) r.push(arr[i]/arr[i-1]); } if(!r.length) return 1; let p=1; r.forEach(function(x){p*=x;}); return Math.max(0.5, Math.min(2, Math.pow(p, 1/r.length))); }
