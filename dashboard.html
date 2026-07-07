@@ -2362,7 +2362,7 @@ let ALL_ROWS = null;          // ongefilterde rijen van de laatst geladen Excel
 let LAST_FILENAME = '';
 let CLIENT_FILTER = null;     // klantnaam of null
 let ACCOUNT_FILTER = null;    // 'A' | 'B' | 'C' of null
-let INDUSTRY_ONLY = null;     // enkel deze sector tonen (globaal filter), of null = alle
+let INDUSTRY_SEL = [];        // geselecteerde sectoren (globaal filter); leeg = alle sectoren
 let FULL_ACCOUNT_STATUS = {}; // A/B/C-classificatie bepaald op de VOLLEDIGE dataset
 function clientKeyOf(r){ return String(r['CUSTOMER COMPANY']||r['BILLING COMPANY']||'Onbekend').trim(); }
 // sector van een ruwe orderrij (via de AMFG-klantkaart-industrie, genormaliseerd)
@@ -2376,7 +2376,7 @@ function applyActiveRowFilters(rows){
   let out = rows;
   if(CLIENT_FILTER) out = out.filter(function(r){ return clientKeyOf(r) === CLIENT_FILTER; });
   if(ACCOUNT_FILTER) out = out.filter(function(r){ return (FULL_ACCOUNT_STATUS[clientKeyOf(r)] || 'C') === ACCOUNT_FILTER; });
-  if(INDUSTRY_ONLY) out = out.filter(function(r){ return industryOfRow(r)===INDUSTRY_ONLY; });
+  if(INDUSTRY_SEL.length) out = out.filter(function(r){ return INDUSTRY_SEL.indexOf(industryOfRow(r))>=0; });
   return out;
 }
 function processWithFilter(rows, fileName){
@@ -2390,7 +2390,7 @@ function reapplyFilters(){
   processExcelData(ALL_ROWS, LAST_FILENAME);
   FULL_ACCOUNT_STATUS = Object.assign({}, DATA.account_status);
   // 2) als er een filter actief is: opnieuw verwerken op de gefilterde subset
-  if(CLIENT_FILTER || ACCOUNT_FILTER || INDUSTRY_ONLY){
+  if(CLIENT_FILTER || ACCOUNT_FILTER || INDUSTRY_SEL.length){
     processExcelData(applyActiveRowFilters(ALL_ROWS), LAST_FILENAME);
   }
   renderFilterBar();
@@ -2446,12 +2446,14 @@ function showSectorLoading(done,total){
   el.classList.add('show');
 }
 function hideSectorLoading(){ const el=document.getElementById('loading'); if(el) el.classList.remove('show'); }
-function setGlobalSectorAll(){ INDUSTRY_ONLY=null; reapplyFilters(); renderGlobalFilterBar(); }
+function setGlobalSectorAll(){ INDUSTRY_SEL=[]; reapplyFilters(); renderGlobalFilterBar(); }
 async function setGlobalSector(name){
-  INDUSTRY_ONLY = (INDUSTRY_ONLY===name) ? null : name;   // klik = alleen deze sector; nogmaals = alle
+  // klik = sector toevoegen/verwijderen (meervoudige selectie); leeg = alle sectoren
+  const i=INDUSTRY_SEL.indexOf(name);
+  if(i>=0) INDUSTRY_SEL.splice(i,1); else INDUSTRY_SEL.push(name);
   renderGlobalFilterBar();
   // industrie-map nodig om rijen op sector te filteren — indien nog niet volledig: ophalen
-  if(INDUSTRY_ONLY){
+  if(INDUSTRY_SEL.length){
     try{ loadIndustryCache(); }catch(e){}
     const missing = (typeof uniqueCustomerIds==='function' && INDUSTRY_MAP) ? uniqueCustomerIds().filter(function(id){ return !(id in INDUSTRY_MAP); }) : [];
     if(missing.length && !INDUSTRY_LOADING){
@@ -2464,7 +2466,7 @@ async function setGlobalSector(name){
   }
   reapplyFilters();
 }
-function clearGlobalFilters(){ ACCOUNT_FILTER=null; INDUSTRY_ONLY=null; CLIENT_FILTER=null; reapplyFilters(); renderGlobalFilterBar(); }
+function clearGlobalFilters(){ ACCOUNT_FILTER=null; INDUSTRY_SEL=[]; CLIENT_FILTER=null; reapplyFilters(); renderGlobalFilterBar(); }
 // Welke sectoren hebben minstens 1 order in de (ongefilterde) dataset? null = cache nog niet
 // geladen → toon alle chips (zodat een klik de industrie-load kan starten).
 function sectorsWithOrders(){
@@ -2484,20 +2486,20 @@ function renderGlobalFilterBar(){
     '<span class="gf-acc-group">'+accBtn('all','Alle')+accBtn('A','A')+accBtn('B','B')+accBtn('C','C')+'</span>'+
     '<span class="gf-sep"></span><span class="gf-chips">';
   // "Alle sectoren"-chip
-  html+='<button type="button" class="gf-chip gf-all'+(!INDUSTRY_ONLY?' active':'')+'" onclick="setGlobalSectorAll()">Alle sectoren</button>';
+  html+='<button type="button" class="gf-chip gf-all'+(!INDUSTRY_SEL.length?' active':'')+'" onclick="setGlobalSectorAll()">Alle sectoren</button>';
   // Alleen sectoren MET orders tonen (zodra de industrie-cache geladen is). Is de cache nog
   // niet geladen, dan tonen we alles zodat een klik de lazy-load kan starten.
   const present = sectorsWithOrders();
-  const shownSectors = (present ? ALL_SECTORS.filter(function(n){ return present.has(n) || n===INDUSTRY_ONLY; }) : ALL_SECTORS)
+  const shownSectors = (present ? ALL_SECTORS.filter(function(n){ return present.has(n) || INDUSTRY_SEL.indexOf(n)>=0; }) : ALL_SECTORS)
     .filter(function(n){ return HIDDEN_SECTORS.indexOf(n)<0; });   // Particulier/Onbekend altijd verbergen
   shownSectors.forEach(function(n){
     const c=indColor(n, ALL_SECTORS.indexOf(n));   // stabiele kleur o.b.v. originele index
-    const sel = (INDUSTRY_ONLY===n);
-    const off = (INDUSTRY_ONLY && !sel);   // andere sectoren dimmen zodra er één gekozen is
+    const sel = (INDUSTRY_SEL.indexOf(n)>=0);
+    const off = (INDUSTRY_SEL.length && !sel);   // niet-geselecteerde sectoren dimmen zodra er ≥1 gekozen is
     html+='<button type="button" class="gf-chip'+(off?' off':'')+(sel?' sel':'')+'" onclick="setGlobalSector(\''+n.replace(/\x27/g,"\\\x27")+'\')" style="border-color:'+(off?'var(--border-2)':c)+'"><span class="gf-dot" style="background:'+c+'"></span>'+n+'</button>';
   });
   html+='</span><span id="gfIndLoading" style="display:none;color:var(--light-blue);font-size:11px;margin-left:6px">sectoren laden&hellip;</span>';
-  if(ACCOUNT_FILTER || INDUSTRY_ONLY || CLIENT_FILTER) html+='<button type="button" class="gf-reset" onclick="clearGlobalFilters()">&times; reset</button>';
+  if(ACCOUNT_FILTER || INDUSTRY_SEL.length || CLIENT_FILTER) html+='<button type="button" class="gf-reset" onclick="clearGlobalFilters()">&times; reset</button>';
   el.innerHTML=html;
 }
 // === AMFG live-koppeling: orders van het lopende jaar same-origin ophalen op AMFG ===
@@ -3145,7 +3147,7 @@ function showFilterEmpty(on){
   const ov=document.getElementById('filterEmptyOverlay'); if(!ov) return;
   if(on){
     const parts=[];
-    if(typeof INDUSTRY_ONLY!=='undefined' && INDUSTRY_ONLY) parts.push('sector "'+INDUSTRY_ONLY+'"');
+    if(typeof INDUSTRY_SEL!=='undefined' && INDUSTRY_SEL.length) parts.push('sector'+(INDUSTRY_SEL.length>1?'en':'')+' "'+INDUSTRY_SEL.join('", "')+'"');
     if(typeof ACCOUNT_FILTER!=='undefined' && ACCOUNT_FILTER) parts.push(ACCOUNT_FILTER+'-accounts');
     if(typeof CLIENT_FILTER!=='undefined' && CLIENT_FILTER) parts.push('klant "'+CLIENT_FILTER+'"');
     const msg=document.getElementById('filterEmptyMsg');
