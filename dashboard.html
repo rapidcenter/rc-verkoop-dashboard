@@ -2493,13 +2493,15 @@ let AMFG_LOADING=false;
 // gebruiker klikt (historie overslaan), of false als de tijd verstrijkt (volledig laden).
 function askSkipHistory(sec){
   return new Promise(function(resolve){
-    const btn=document.getElementById('skipHistBtn');
+    const by=document.getElementById('skipYearBtn');
+    const bm=document.getElementById('skipMonthBtn');
     const cnt=document.getElementById('skipCount');
-    if(!btn){ resolve(false); return; }
+    if(!by && !bm){ resolve('full'); return; }
     let left=sec, done=false, t=null;
-    function finish(skip){ if(done) return; done=true; if(t) clearInterval(t); resolve(skip); }
-    btn.addEventListener('click', function(){ finish(true); });
-    t=setInterval(function(){ left--; if(cnt) cnt.textContent=left; if(left<=0) finish(false); }, 1000);
+    function finish(choice){ if(done) return; done=true; if(t) clearInterval(t); resolve(choice); }
+    if(by) by.addEventListener('click', function(){ finish('year'); });
+    if(bm) bm.addEventListener('click', function(){ finish('month'); });
+    t=setInterval(function(){ left--; if(cnt) cnt.textContent=left; if(left<=0) finish('full'); }, 1000);
   });
 }
 async function amfgAugment(){
@@ -2525,32 +2527,44 @@ async function amfgAugment(){
         + '<div id="amfgBar" style="width:4%;height:100%;background:var(--rc-blue);transition:width .35s ease"></div></div>'
         + '<div id="amfgTxt" style="font-size:12px;letter-spacing:.02em;text-transform:none;color:var(--light-blue);margin-top:12px">verbinden met AMFG…</div>'
         + '<div id="skipBox" style="margin-top:20px">'
-        +   '<button id="skipHistBtn" type="button" style="background:transparent;border:1px solid var(--rc-blue);color:var(--light-blue);border-radius:6px;padding:9px 18px;font:700 12px Roboto,system-ui,sans-serif;letter-spacing:.05em;text-transform:uppercase;cursor:pointer">Doorgaan zonder historie</button>'
+        +   '<div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">'
+        +     '<button id="skipYearBtn" type="button" style="background:transparent;border:1px solid var(--rc-blue);color:var(--light-blue);border-radius:6px;padding:9px 16px;font:700 12px Roboto,system-ui,sans-serif;letter-spacing:.04em;text-transform:uppercase;cursor:pointer">Alleen dit jaar</button>'
+        +     '<button id="skipMonthBtn" type="button" style="background:transparent;border:1px solid var(--rc-blue);color:var(--light-blue);border-radius:6px;padding:9px 16px;font:700 12px Roboto,system-ui,sans-serif;letter-spacing:.04em;text-transform:uppercase;cursor:pointer">Alleen deze maand</button>'
+        +   '</div>'
         +   '<div id="skipInfo" style="font-size:11px;color:var(--ink-3);margin-top:9px">Volledige historie (3 jaar) wordt over <b id="skipCount" style="color:var(--light-blue)">5</b> s opgehaald&hellip;</div>'
         + '</div>'
         + '</div>';
       loadEl.classList.add('show');
     }
   }
-  // Optie: historie overslaan — 5s aftellen. Klik = alleen huidig jaar (snel);
-  // niets klikken = na 5s alsnog de volledige historie ophalen.
+  // Optie: sneller laden — 5s aftellen. Klik "Alleen dit jaar" = huidig jaar;
+  // "Alleen deze maand" = lopende maand; niets klikken = na 5s volledige historie.
+  let choice = 'full';
   if(hasToken && baseFromYear < yr){
-    const skip = await askSkipHistory(5);
-    const t=document.getElementById('amfgTxt');
-    if(skip){ fromYear = yr; if(t) t.textContent='alleen huidig jaar laden…'; }
-    else if(t){ t.textContent='volledige historie laden…'; }
+    choice = await askSkipHistory(5);
   }
   const sb=document.getElementById('skipBox'); if(sb) sb.style.display='none';
-  const spanYears = Math.max(1, yr - fromYear + 1);
-  estPages = Math.max(1, spanYears*15);   // ~15 pagina's (á 200) per jaar
-  const onProg = function(fetched, pages){
-    const bar=document.getElementById('amfgBar'), txt=document.getElementById('amfgTxt');
-    const pct=Math.min(96, Math.round(pages/estPages*100));
-    if(bar) bar.style.width=Math.max(4,pct)+'%';
-    if(txt) txt.textContent=fetched.toLocaleString('nl-NL')+' orders geladen…';
-  };
+  const t0=document.getElementById('amfgTxt');
   let amfg=null;
-  try{ amfg=await amfgFetchRange(fromYear, yr+1, onProg); }catch(e){ amfg=null; }
+  if(choice==='month'){
+    fromYear = yr;
+    if(t0) t0.textContent='alleen deze maand laden…';
+    const dm = new Date().getDate();   // ~vanaf de 1e van deze maand
+    let res=null; try{ res=await amfgFetchSince(dm); }catch(e){ res=null; }
+    amfg = (res && res.rows) ? res.rows : null;
+  } else {
+    fromYear = (choice==='year') ? yr : baseFromYear;
+    if(t0) t0.textContent = (choice==='year') ? 'alleen dit jaar laden…' : 'volledige historie laden…';
+    const spanYears = Math.max(1, yr - fromYear + 1);
+    estPages = Math.max(1, spanYears*15);   // ~15 pagina's (á 200) per jaar
+    const onProg = function(fetched, pages){
+      const bar=document.getElementById('amfgBar'), txt=document.getElementById('amfgTxt');
+      const pct=Math.min(96, Math.round(pages/estPages*100));
+      if(bar) bar.style.width=Math.max(4,pct)+'%';
+      if(txt) txt.textContent=fetched.toLocaleString('nl-NL')+' orders geladen…';
+    };
+    try{ amfg=await amfgFetchRange(fromYear, yr+1, onProg); }catch(e){ amfg=null; }
+  }
   AMFG_LOADING = false;
   if(amfg && amfg.length){ const bar=document.getElementById('amfgBar'), txt=document.getElementById('amfgTxt'); if(bar) bar.style.width='100%'; if(txt) txt.textContent='verwerken…'; }
   if(loadEl){ loadEl.classList.remove('show'); loadEl.textContent='Excel verwerken…'; }
