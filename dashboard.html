@@ -1219,7 +1219,7 @@ function renderLast6Chart(){
       const xIndex2Ym = chart.data.labels.map(function(_, idx){
         const i = 5 - idx;
         let mm = m - i, yy = yr;
-        while(mm <= 0){ mm += 12; yy -= 1; }
+        while(mm <= 0 && isFinite(mm)){ mm += 12; yy -= 1; }
         return {yy:yy, mm:mm-1};
       });
       chart.data.datasets.forEach(function(ds, di){
@@ -2610,8 +2610,12 @@ function processExcelData(rows, fileName){
     return {date:dt, year:dt.getFullYear(), month:dt.getMonth()+1, client:String(r['BILLING COMPANY']||'Onbekend').trim(), revenue:parseFloat(r['TOTAL NET PRICE'])||0};
   }).filter(r => !isNaN(r.year));
   const allYears = Array.from(new Set(cleaned.map(r=>r.year))).sort((a,b)=>b-a);
-  const currYear = allYears[0], prevYear = currYear-1, prevPrevYear = currYear-2;
-  const cutoff = Math.max.apply(null, cleaned.filter(r=>r.year===currYear).map(r=>r.month));
+  const currYear = allYears.length ? allYears[0] : new Date().getFullYear();
+  const prevYear = currYear-1, prevPrevYear = currYear-2;
+  // Let op: bij een LEGE (gefilterde) subset is deze lijst leeg → Math.max([]) = -Infinity.
+  // Dat maakte DATA.ytd_month = -Infinity en liet een while-lus elders eeuwig draaien (freeze).
+  const _curMonths = cleaned.filter(r=>r.year===currYear).map(r=>r.month);
+  const cutoff = _curMonths.length ? Math.max.apply(null, _curMonths) : (new Date().getMonth()+1);
   function yearStats(yr, ytd){
     let d = cleaned.filter(r=>r.year===yr);
     if(ytd) d = d.filter(r=>r.month<=ytd);
