@@ -621,6 +621,7 @@
           <button id="indModeYtd" class="yr-btn active" type="button" onclick="setIndMode('ytd')">YTD</button>
           <button id="indModeYear" class="yr-btn" type="button" onclick="setIndMode('year')">Per jaar</button>
           <button id="indFcBtn" class="yr-btn active" type="button" onclick="setIndFc()" title="Prognose 2 jaar o.b.v. historische groei">&#128200; Prognose 2 jr</button>
+          <button id="indTotBtn" class="yr-btn active" type="button" onclick="setIndTot()" title="Totaallijn (opgeteld over alle getoonde sectoren) tonen/verbergen">&#931; Totaallijn</button>
         </div>
         <span style="font-size:11px;color:var(--ink-3)">Filter A/B/C &amp; sectoren via de balk bovenaan het dashboard</span>
       </div>
@@ -3486,6 +3487,11 @@ function setIndFc(){
   const b=document.getElementById('indFcBtn'); if(b) b.classList.toggle('active', window.__indFc!==false);
   renderIndustry();
 }
+function setIndTot(){
+  window.__indTot = (window.__indTot===false);   // toggle (default = aan)
+  const b=document.getElementById('indTotBtn'); if(b) b.classList.toggle('active', window.__indTot!==false);
+  renderIndustry();
+}
 // Gedeelde sector-filterbalk: chips die alle charts tegelijk filteren
 function renderIndFilter(allNames){
   const el=document.getElementById('indFilter'); if(!el) return;
@@ -3603,6 +3609,13 @@ function renderIndustry(){
   // Jaartotalen (reageren op zichtbare industrieën) — tussen haakjes op de x-as
   const totOrdY={}; years.forEach(function(y){ totOrdY[y]=names.reduce(function(s,n){return s+((agg[n][ordKey][y])||0);},0); });
   const totOrdFc=[0,0]; names.forEach(function(n){ totOrdFc[0]+=fcOrd[n][0]; totOrdFc[1]+=fcOrd[n][1]; });
+  // Dikke, goed zichtbare TOTAAL-lijn (opgeteld over de getoonde sectoren) — aan/uit via knop.
+  const showTot = window.__indTot !== false;
+  function totalDs(realTotY, fcArr){
+    const data = years.map(function(y){ return Math.round(realTotY[y]||0); }).concat(showFc ? fcArr.map(function(v){ return Math.round(v||0); }) : []);
+    return {label:'Totaal', data:data, borderColor:'#FFFFFF', backgroundColor:'#FFFFFF', tension:.3, borderWidth:4, pointRadius:4.5, pointHoverRadius:8, pointBackgroundColor:'#FFFFFF', fill:false, order:100,
+      segment:{ borderDash:function(ctx){ return ctx.p0DataIndex>=lastRealIdx ? [7,5] : undefined; } } };
+  }
   function mkLabels(realTot, fcTot){
     const arr=years.map(function(y){ return String(y)+' ('+realTot(y)+')'; });
     if(showFc){ fcYears.forEach(function(y,k){ arr.push(String(y)+' ('+fcTot(k)+')'); }); }
@@ -3614,8 +3627,9 @@ function renderIndustry(){
   const labAov=mkLabels(function(y){return totOrdY[y]? fmtEurShort(Math.round(totY[y]/totOrdY[y])):'-';}, function(k){return totOrdFc[k]? fmtEurShort(Math.round(totFc[k]/totOrdFc[k])):'-';});
   // 1) Omzet
   if(charts.indRevYear) charts.indRevYear.destroy();
+  const revDs=ds(rev, function(n){return fcRev[n];}); if(showTot) revDs.push(totalDs(totY, totFc));
   charts.indRevYear=new Chart(document.getElementById('chartIndRevYear'),{ type:'line',
-    data:{labels:labRev, datasets:ds(rev, function(n){return fcRev[n];})},
+    data:{labels:labRev, datasets:revDs},
     options:opts(function(v){return fmtEurShort(v);}, function(v){return fmtEur(v);}),
     plugins:[indPointLabels(function(v){return fmtEurShort(v);})] });
   // 2) Marktaandeel (100% gestapelde vlakken)
@@ -3627,8 +3641,9 @@ function renderIndustry(){
     plugins:[indPointLabels(function(v){return Math.round(v)+'%';})] });
   // 3) Aantal orders
   if(charts.indOrdYear) charts.indOrdYear.destroy();
+  const ordDs=ds(ord, function(n){return fcOrd[n];}); if(showTot) ordDs.push(totalDs(totOrdY, totOrdFc));
   charts.indOrdYear=new Chart(document.getElementById('chartIndOrdYear'),{ type:'line',
-    data:{labels:labOrd, datasets:ds(ord, function(n){return fcOrd[n];})},
+    data:{labels:labOrd, datasets:ordDs},
     options:opts(function(v){return fmtNum(v);}, function(v){return fmtNum(v)+' orders';}),
     plugins:[indPointLabels(function(v){return fmtNum(v);})] });
   // 4) Gemiddelde orderwaarde
