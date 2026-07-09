@@ -3162,7 +3162,7 @@ function showFilterEmpty(on){
 // BEHALVE status met 'cancel' of 'finished'. Bedragen = TOTAL NET PRICE.
 // Afdelingen volgens de officiële RapidCenter-statuslijst (4 afdelingen, geen Dispatch).
 const PL_STAGES = [
-  {key:'verkoop',       name:'Verkoop'},
+  {key:'verkoop',       name:'Verkoop (rolling forecast)'},
   {key:'wvb',           name:'Werkvoorbereiding'},
   {key:'productie',     name:'Productie'},
   {key:'administratie', name:'Administratie'}
@@ -3332,7 +3332,7 @@ function renderPipeline(){
     if(st.key==='verkoop' && DATA.quote_pipeline && DATA.quote_pipeline.count){
       const q=DATA.quote_pipeline;
       h += '<div class="pl-stage">';
-      h += '<div class="pl-stage-head" title="Gewogen pipeline = som van open offertes × datagedreven winkans (conversie uit offertes >90 dagen)"><span class="pl-stage-name">Verkoop</span><span class="pl-stage-eur">'+eur(q.weighted)+'</span></div>';
+      h += '<div class="pl-stage-head" title="Gewogen pipeline = som van open offertes × datagedreven winkans (conversie uit offertes >90 dagen)"><span class="pl-stage-name">Verkoop (rolling forecast)</span><span class="pl-stage-eur">'+eur(q.weighted)+'</span></div>';
       h += '<div class="pl-cards">';
       q.sectors.slice(0,6).forEach(function(s){
         const col=(typeof indColor==='function')?indColor(s.name,0):'#0096D6';
