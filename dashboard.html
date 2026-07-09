@@ -3275,7 +3275,7 @@ async function amfgFetchQuotes(){
   if(!tok) return false;
   const H={Authorization:tok,Accept:'application/json'};
   const all=[];
-  for(let off=0; off<4000; off+=500){
+  for(let off=0; off<8000; off+=500){
     let r; try{ r=await fetch('/management-service/api/v1/ticket-quote?limit=500&offset='+off+'&sort.direction=desc&sort.by=sendDate&stateFilters=%7B%7D&search.filter=&timezone=2',{headers:H}); }catch(e){ break; }
     if(!r.ok) break;
     const d=await r.json(); const rows=d.rows||[];
@@ -3290,7 +3290,7 @@ function computeQuotePipeline(){
   const now=Date.now(), D90=90*864e5;
   const mo={a:0,r:0}, ms={};
   all.forEach(function(q){ const t=Date.parse(q.send); if(!t||(now-t)<=D90) return;
-    const won=q.st==='Accepted', lost=q.st==='Rejected'; if(!won&&!lost) return;
+    const won=q.st==='Accepted', lost=(q.st==='Rejected'||q.st==='Expired'); if(!won&&!lost) return;
     mo[won?'a':'r']++;
     const sec=secMap[q.company]||'(overig)'; const s=ms[sec]=ms[sec]||{a:0,r:0}; s[won?'a':'r']++;
   });
