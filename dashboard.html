@@ -519,6 +519,7 @@
   <button class="tab-btn" onclick="switchTab('overzicht',this)">Overzicht YTD</button>
   <button class="tab-btn" onclick="switchTab('klanten',this)">ABC Accounts</button>
   <button class="tab-btn" onclick="switchTab('industrie',this)">Industrie</button>
+  <button class="tab-btn" onclick="switchTab('otif',this)">OTIF</button>
   <button class="tab-btn" onclick="switchTab('maanden',this)">Maandvergelijking</button>
   <button class="tab-btn" onclick="switchTab('trends',this)">Trends &amp; Prognose</button>
   <button class="tab-btn" onclick="switchTab('piramide',this)">Piramide</button>
@@ -641,6 +642,26 @@
         <div class="chart-title"><span id="indT4">Gemiddelde orderwaarde per industrie</span><span class="sub">NET &euro; per order</span></div>
         <div class="chart-canvas-wrap tall"><canvas id="chartIndAov"></canvas></div>
       </div>
+    </div>
+  </section>
+
+  <section class="tab-section" id="tab-otif">
+    <div class="pyr-header">
+      <div>
+        <div class="pyr-title">OTIF &mdash; On Time, In Full</div>
+        <div class="pyr-subtitle">% orders op tijd &eacute;n compleet geleverd &middot; per ship-maand &middot; strikte definitie uit het OTIF-archief</div>
+      </div>
+    </div>
+    <div class="ind-toolbar" style="display:flex;flex-wrap:wrap;align-items:center;gap:16px;margin-bottom:16px">
+      <div class="ind-modebar" style="display:flex;gap:8px">
+        <button id="otifTotBtn" class="yr-btn active" type="button" onclick="setOtifTot()" title="Totaallijn (alle sectoren samen) tonen/verbergen">&#931; Totaallijn</button>
+        <button id="otifSecBtn" class="yr-btn active" type="button" onclick="setOtifSec()" title="Lijnen per sector tonen/verbergen">Per sector</button>
+      </div>
+      <span style="font-size:11px;color:var(--ink-3)">Klik op een naam in de legenda om die lijn te verbergen &middot; grijze zones: streefwaarden 85% / 95%</span>
+    </div>
+    <div class="chart-box" style="margin-bottom:16px">
+      <div class="chart-title"><span>OTIF % per maand</span><span class="sub" id="otifSub">2024&ndash;2026 &middot; per ship-maand</span></div>
+      <div class="chart-canvas-wrap tall"><canvas id="chartOtif"></canvas></div>
     </div>
   </section>
 
@@ -808,6 +829,7 @@ function switchTab(id, btn){
   if(fb) fb.style.display = show ? 'flex' : 'none';
   if(yt) yt.style.display = show ? 'flex' : 'none';
   if(id==='industrie' && hasData()){ ensureIndustryLoaded(); }
+  if(id==='otif'){ renderOtif(); }
   setTimeout(()=>Object.values(charts).forEach(c=>c&&c.resize()),30);
 }
 
@@ -3491,6 +3513,63 @@ function setIndTot(){
   window.__indTot = (window.__indTot===false);   // toggle (default = aan)
   const b=document.getElementById('indTotBtn'); if(b) b.classList.toggle('active', window.__indTot!==false);
   renderIndustry();
+}
+// ===== OTIF-tab — strikte OTIF (On Time + In Full), vooraf berekend uit amfg_archief =====
+// Ship-maand 2024-01 t/m 2026-07. Per maand n=aantal orders, k=aantal OTIF. Totaal + per sector.
+const OTIF_DATA = {"months":["2024-01","2024-02","2024-03","2024-04","2024-05","2024-06","2024-07","2024-08","2024-09","2024-10","2024-11","2024-12","2025-01","2025-02","2025-03","2025-04","2025-05","2025-06","2025-07","2025-08","2025-09","2025-10","2025-11","2025-12","2026-01","2026-02","2026-03","2026-04","2026-05","2026-06","2026-07"],"total":[{"n":324,"k":135},{"n":369,"k":219},{"n":366,"k":214},{"n":364,"k":221},{"n":353,"k":191},{"n":278,"k":179},{"n":347,"k":202},{"n":272,"k":117},{"n":295,"k":131},{"n":345,"k":172},{"n":314,"k":144},{"n":255,"k":127},{"n":295,"k":173},{"n":335,"k":236},{"n":375,"k":300},{"n":291,"k":244},{"n":447,"k":318},{"n":372,"k":328},{"n":383,"k":359},{"n":329,"k":281},{"n":356,"k":315},{"n":405,"k":382},{"n":379,"k":342},{"n":390,"k":338},{"n":375,"k":355},{"n":349,"k":291},{"n":373,"k":344},{"n":254,"k":217},{"n":171,"k":152},{"n":239,"k":184},{"n":35,"k":28}],"sectors":{"(geen sector)":[{"n":10,"k":3},{"n":4,"k":2},{"n":8,"k":2},{"n":9,"k":8},{"n":9,"k":5},{"n":4,"k":4},{"n":6,"k":4},{"n":4,"k":3},{"n":3,"k":0},{"n":7,"k":3},{"n":2,"k":1},{"n":4,"k":1},{"n":4,"k":3},{"n":1,"k":0},{"n":4,"k":3},{"n":2,"k":2},{"n":4,"k":4},{"n":0,"k":0},{"n":0,"k":0},{"n":0,"k":0},{"n":0,"k":0},{"n":0,"k":0},{"n":0,"k":0},{"n":0,"k":0},{"n":0,"k":0},{"n":1,"k":1},{"n":0,"k":0},{"n":0,"k":0},{"n":0,"k":0},{"n":0,"k":0},{"n":0,"k":0}],"Consumenten Goederen & Elektronica":[{"n":54,"k":20},{"n":65,"k":40},{"n":57,"k":32},{"n":61,"k":40},{"n":44,"k":18},{"n":52,"k":33},{"n":47,"k":21},{"n":57,"k":17},{"n":56,"k":26},{"n":64,"k":35},{"n":61,"k":17},{"n":51,"k":22},{"n":49,"k":23},{"n":59,"k":47},{"n":57,"k":50},{"n":43,"k":36},{"n":48,"k":39},{"n":37,"k":32},{"n":46,"k":43},{"n":40,"k":32},{"n":67,"k":56},{"n":57,"k":54},{"n":47,"k":44},{"n":37,"k":32},{"n":49,"k":47},{"n":25,"k":23},{"n":34,"k":31},{"n":17,"k":12},{"n":18,"k":17},{"n":24,"k":22},{"n":2,"k":1}],"Industrieel":[{"n":87,"k":32},{"n":78,"k":41},{"n":96,"k":60},{"n":85,"k":58},{"n":79,"k":44},{"n":67,"k":41},{"n":88,"k":54},{"n":57,"k":24},{"n":74,"k":25},{"n":80,"k":34},{"n":80,"k":30},{"n":64,"k":23},{"n":81,"k":46},{"n":69,"k":49},{"n":81,"k":58},{"n":53,"k":38},{"n":66,"k":59},{"n":68,"k":60},{"n":68,"k":60},{"n":57,"k":49},{"n":50,"k":47},{"n":67,"k":63},{"n":59,"k":54},{"n":60,"k":52},{"n":62,"k":53},{"n":62,"k":53},{"n":64,"k":56},{"n":37,"k":33},{"n":23,"k":20},{"n":30,"k":26},{"n":3,"k":3}],"Medisch":[{"n":11,"k":4},{"n":17,"k":10},{"n":8,"k":4},{"n":6,"k":1},{"n":8,"k":5},{"n":15,"k":6},{"n":14,"k":2},{"n":10,"k":3},{"n":12,"k":3},{"n":14,"k":5},{"n":11,"k":4},{"n":3,"k":0},{"n":8,"k":4},{"n":10,"k":8},{"n":12,"k":8},{"n":6,"k":6},{"n":6,"k":6},{"n":10,"k":8},{"n":8,"k":5},{"n":10,"k":8},{"n":4,"k":4},{"n":12,"k":11},{"n":13,"k":11},{"n":10,"k":9},{"n":9,"k":9},{"n":4,"k":4},{"n":6,"k":6},{"n":8,"k":7},{"n":3,"k":2},{"n":7,"k":7},{"n":1,"k":1}],"Militair & Defensie & Ruimtevaart":[{"n":3,"k":1},{"n":2,"k":1},{"n":7,"k":5},{"n":10,"k":6},{"n":6,"k":4},{"n":11,"k":7},{"n":19,"k":7},{"n":4,"k":1},{"n":22,"k":8},{"n":25,"k":13},{"n":15,"k":8},{"n":9,"k":2},{"n":11,"k":6},{"n":9,"k":3},{"n":12,"k":8},{"n":19,"k":18},{"n":22,"k":17},{"n":24,"k":17},{"n":22,"k":21},{"n":16,"k":11},{"n":12,"k":10},{"n":23,"k":22},{"n":16,"k":15},{"n":12,"k":10},{"n":19,"k":19},{"n":15,"k":13},{"n":11,"k":10},{"n":8,"k":7},{"n":4,"k":4},{"n":8,"k":6},{"n":1,"k":1}],"Mobiliteit & Vervoer":[{"n":18,"k":7},{"n":26,"k":14},{"n":25,"k":15},{"n":33,"k":18},{"n":18,"k":11},{"n":23,"k":12},{"n":21,"k":11},{"n":11,"k":4},{"n":15,"k":4},{"n":29,"k":12},{"n":26,"k":10},{"n":18,"k":9},{"n":23,"k":9},{"n":33,"k":16},{"n":28,"k":23},{"n":20,"k":17},{"n":22,"k":20},{"n":21,"k":20},{"n":28,"k":26},{"n":19,"k":17},{"n":25,"k":23},{"n":12,"k":12},{"n":20,"k":18},{"n":23,"k":22},{"n":20,"k":20},{"n":15,"k":15},{"n":24,"k":23},{"n":17,"k":16},{"n":14,"k":12},{"n":19,"k":17},{"n":2,"k":2}],"Onderwijs":[{"n":7,"k":4},{"n":5,"k":2},{"n":2,"k":1},{"n":2,"k":0},{"n":3,"k":1},{"n":1,"k":1},{"n":3,"k":3},{"n":0,"k":0},{"n":1,"k":0},{"n":2,"k":0},{"n":4,"k":2},{"n":2,"k":1},{"n":2,"k":0},{"n":2,"k":2},{"n":3,"k":3},{"n":2,"k":1},{"n":0,"k":0},{"n":6,"k":6},{"n":4,"k":4},{"n":1,"k":1},{"n":0,"k":0},{"n":2,"k":2},{"n":0,"k":0},{"n":1,"k":1},{"n":1,"k":1},{"n":0,"k":0},{"n":4,"k":3},{"n":2,"k":1},{"n":1,"k":1},{"n":1,"k":1},{"n":1,"k":1}],"Orthotic and prosthetic devices":[{"n":88,"k":43},{"n":97,"k":62},{"n":100,"k":60},{"n":101,"k":55},{"n":136,"k":78},{"n":59,"k":49},{"n":87,"k":60},{"n":85,"k":46},{"n":63,"k":44},{"n":89,"k":59},{"n":81,"k":58},{"n":76,"k":55},{"n":75,"k":58},{"n":88,"k":74},{"n":127,"k":100},{"n":98,"k":82},{"n":139,"k":125},{"n":156,"k":142},{"n":153,"k":149},{"n":130,"k":118},{"n":145,"k":135},{"n":179,"k":170},{"n":188,"k":170},{"n":204,"k":175},{"n":174,"k":165},{"n":187,"k":152},{"n":187,"k":176},{"n":138,"k":118},{"n":82,"k":71},{"n":100,"k":71},{"n":19,"k":14}],"Producent":[{"n":35,"k":16},{"n":53,"k":33},{"n":46,"k":24},{"n":38,"k":24},{"n":32,"k":19},{"n":28,"k":15},{"n":30,"k":19},{"n":17,"k":5},{"n":28,"k":13},{"n":19,"k":5},{"n":19,"k":6},{"n":16,"k":8},{"n":28,"k":14},{"n":41,"k":21},{"n":21,"k":20},{"n":33,"k":31},{"n":35,"k":31},{"n":31,"k":28},{"n":37,"k":34},{"n":43,"k":33},{"n":34,"k":24},{"n":34,"k":31},{"n":23,"k":19},{"n":30,"k":25},{"n":22,"k":22},{"n":23,"k":18},{"n":28,"k":24},{"n":16,"k":14},{"n":14,"k":13},{"n":17,"k":15},{"n":3,"k":2}],"Unmanned Aerial Vehicles (drones)":[{"n":11,"k":5},{"n":22,"k":14},{"n":17,"k":11},{"n":19,"k":11},{"n":18,"k":6},{"n":18,"k":11},{"n":32,"k":21},{"n":27,"k":14},{"n":21,"k":8},{"n":16,"k":6},{"n":15,"k":8},{"n":12,"k":6},{"n":14,"k":10},{"n":23,"k":16},{"n":30,"k":27},{"n":15,"k":13},{"n":105,"k":17},{"n":19,"k":15},{"n":17,"k":17},{"n":13,"k":12},{"n":19,"k":16},{"n":19,"k":17},{"n":13,"k":11},{"n":13,"k":12},{"n":19,"k":19},{"n":17,"k":12},{"n":15,"k":15},{"n":11,"k":9},{"n":12,"k":12},{"n":33,"k":19},{"n":3,"k":3}]}};
+const OTIF_SECTOR_COLORS = {
+  'Orthotic and prosthetic devices':'#EC4899', 'Consumenten Goederen & Elektronica':'#7C3AED',
+  'Industrieel':'#87898B', 'Producent':'#16A34A', 'Mobiliteit & Vervoer':'#3A8DDE',
+  'Militair & Defensie & Ruimtevaart':'#4A6E8A', 'Medisch':'#EF4444',
+  'Unmanned Aerial Vehicles (drones)':'#59BBE4', 'Onderwijs':'#F59E0B', '(geen sector)':'#57707E'
+};
+const OTIF_MONTH_NL=['jan','feb','mrt','apr','mei','jun','jul','aug','sep','okt','nov','dec'];
+function otifPct(o){ return (o && o.n>0) ? +(o.k/o.n*100).toFixed(1) : null; }
+function setOtifTot(){ window.__otifTot=(window.__otifTot===false); const b=document.getElementById('otifTotBtn'); if(b) b.classList.toggle('active', window.__otifTot!==false); renderOtif(); }
+function setOtifSec(){ window.__otifSec=(window.__otifSec===false); const b=document.getElementById('otifSecBtn'); if(b) b.classList.toggle('active', window.__otifSec!==false); renderOtif(); }
+// dashed drempellijnen op 95% (groen) en 85% (oranje)
+const otifThresholds={ id:'otifThresh', afterDatasetsDraw:function(chart){
+  const ys=chart.scales.y, xa=chart.chartArea; if(!ys||!xa) return; const ctx=chart.ctx;
+  [[95,'#22C55E'],[85,'#F97316']].forEach(function(t){
+    const y=ys.getPixelForValue(t[0]); ctx.save(); ctx.strokeStyle=t[1]; ctx.globalAlpha=.55; ctx.setLineDash([5,4]); ctx.lineWidth=1;
+    ctx.beginPath(); ctx.moveTo(xa.left,y); ctx.lineTo(xa.right,y); ctx.stroke();
+    ctx.setLineDash([]); ctx.globalAlpha=1; ctx.fillStyle=t[1]; ctx.font='600 11px Roboto'; ctx.textAlign='left'; ctx.fillText(t[0]+'%', xa.left+4, y-3); ctx.restore();
+  });
+}};
+function renderOtif(){
+  const cv=document.getElementById('chartOtif'); if(!cv) return;
+  const showTot = window.__otifTot!==false, showSec = window.__otifSec!==false;
+  const labels = OTIF_DATA.months.map(function(m){ const p=m.split('-'); return OTIF_MONTH_NL[+p[1]-1]+" '"+p[0].slice(2); });
+  const ds=[];
+  if(showSec){
+    Object.keys(OTIF_DATA.sectors).forEach(function(sec){
+      const c=OTIF_SECTOR_COLORS[sec]||'#888';
+      ds.push({label:sec, data:OTIF_DATA.sectors[sec].map(otifPct), borderColor:c, backgroundColor:c, tension:.3, borderWidth:2, pointRadius:2.4, pointHoverRadius:6, fill:false, spanGaps:true, hidden: sec==='(geen sector)'});
+    });
+  }
+  if(showTot){
+    ds.push({label:'Totaal', data:OTIF_DATA.total.map(otifPct), borderColor:'#FFFFFF', backgroundColor:'#FFFFFF', tension:.3, borderWidth:4, pointRadius:3.5, pointHoverRadius:8, fill:false, spanGaps:true, order:100});
+  }
+  const last=OTIF_DATA.months[OTIF_DATA.months.length-1];
+  const sub=document.getElementById('otifSub'); if(sub) sub.textContent='2024–2026 · per ship-maand · '+last+' (lopend)';
+  if(charts.otif) charts.otif.destroy();
+  charts.otif=new Chart(cv,{ type:'line',
+    data:{labels:labels, datasets:ds},
+    options:Object.assign({}, CD, {
+      layout:{padding:{top:16,bottom:8,left:12,right:12}},
+      plugins:Object.assign({}, CD.plugins, {
+        legend:{display:true, position:'top', labels:{color:'#CFD2D3', font:{size:11,family:'Roboto'}, boxWidth:12, padding:9, usePointStyle:true}},
+        tooltip:Object.assign({}, CD.plugins.tooltip, {callbacks:{
+          label:function(c){ const src=(c.dataset.label==='Totaal')?OTIF_DATA.total:OTIF_DATA.sectors[c.dataset.label]; const o=src?src[c.dataIndex]:null; const n=o?o.n:0; return c.dataset.label+': '+(c.parsed.y==null?'—':c.parsed.y+'%')+' (n='+n+')'; }
+        }})
+      }),
+      scales:{
+        x:Object.assign({}, CD.scales.x, {ticks:Object.assign({}, CD.scales.x.ticks, {font:{size:11,weight:'600'},maxRotation:60,minRotation:60})}),
+        y:Object.assign({}, CD.scales.y, {beginAtZero:false, min:0, max:100, ticks:Object.assign({}, CD.scales.y.ticks, {callback:function(v){return v+'%';}})})
+      }
+    }),
+    plugins:[otifThresholds] });
+  setTimeout(function(){ if(charts.otif) charts.otif.resize(); },30);
 }
 // Gedeelde sector-filterbalk: chips die alle charts tegelijk filteren
 function renderIndFilter(allNames){
