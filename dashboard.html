@@ -3257,6 +3257,53 @@ function clearPipelineFilter(){
   renderThisMonth();
   renderPipeline();
 }
+// ===== Verkoop-pipeline: open offertes (AMFG ticket-quote) met datagedreven winkans =====
+// Offerte = OFFER-… ; status Active (open) / Accepted (gewonnen) / Rejected (verloren).
+// Winkans = conversie uit de UITONTWIKKELDE cohort (>90 dagen), overall + per sector.
+// Gewogen pipeline = som(open offertewaarde × winkans). Geen extra API-belasting op orders.
+let QUOTES_LOADED=false;
+function quoteCompanySectorMap(){
+  const m={};
+  (ALL_ROWS||[]).forEach(function(r){
+    const c=String(r['CUSTOMER COMPANY']||r['BILLING COMPANY']||'').trim(); if(!c||m[c]) return;
+    const s=(typeof industryOfRow==='function')?industryOfRow(r):''; if(s && s!=='Onbekend') m[c]=s;
+  });
+  return m;
+}
+async function amfgFetchQuotes(){
+  let tok=null; try{tok=localStorage.getItem('accessToken');}catch(e){}
+  if(!tok) return false;
+  const H={Authorization:tok,Accept:'application/json'};
+  const all=[];
+  for(let off=0; off<4000; off+=500){
+    let r; try{ r=await fetch('/management-service/api/v1/ticket-quote?limit=500&offset='+off+'&sort.direction=desc&sort.by=sendDate&stateFilters=%7B%7D&search.filter=&timezone=2',{headers:H}); }catch(e){ break; }
+    if(!r.ok) break;
+    const d=await r.json(); const rows=d.rows||[];
+    rows.forEach(function(x){ all.push({company:String(x.companyName||'').trim(), price:+x.price||0, send:x.sendDate, st:x.statusName}); });
+    if(rows.length<500) break;
+  }
+  DATA._quotes=all; computeQuotePipeline(); return true;
+}
+function computeQuotePipeline(){
+  const all=DATA._quotes||[]; if(!all.length){ DATA.quote_pipeline=null; return; }
+  const secMap=quoteCompanySectorMap();
+  const now=Date.now(), D90=90*864e5;
+  const mo={a:0,r:0}, ms={};
+  all.forEach(function(q){ const t=Date.parse(q.send); if(!t||(now-t)<=D90) return;
+    const won=q.st==='Accepted', lost=q.st==='Rejected'; if(!won&&!lost) return;
+    mo[won?'a':'r']++;
+    const sec=secMap[q.company]||'(overig)'; const s=ms[sec]=ms[sec]||{a:0,r:0}; s[won?'a':'r']++;
+  });
+  const overall=(mo.a+mo.r)? mo.a/(mo.a+mo.r) : 0.9;
+  function rate(sec){ const s=ms[sec]; return (s && (s.a+s.r)>=20) ? s.a/(s.a+s.r) : overall; }
+  const open=all.filter(function(q){ return q.st==='Active'; });
+  const bysec={};
+  open.forEach(function(q){ const sec=secMap[q.company]||'(overig)'; const b=bysec[sec]=bysec[sec]||{name:sec,count:0,gross:0,weighted:0,rate:rate(sec)}; b.count++; b.gross+=q.price; b.weighted+=q.price*b.rate; });
+  const sectors=Object.keys(bysec).map(function(k){return bysec[k];}).sort(function(a,b){return b.weighted-a.weighted;});
+  const gross=open.reduce(function(a,q){return a+q.price;},0);
+  const weighted=sectors.reduce(function(a,s){return a+s.weighted;},0);
+  DATA.quote_pipeline={count:open.length, gross:gross, weighted:weighted, overall:overall, sectors:sectors};
+}
 function renderPipeline(){
   const strip = document.getElementById('pipelineStrip');
   if(!strip) return;
@@ -3281,6 +3328,26 @@ function renderPipeline(){
        '<div class="pl-note">excl. administratie</div></div>';
   pl.stages.forEach(function(st){
     h += '<div class="pl-arrow">&#9656;</div>';
+    // Verkoop-fase: gewogen offerte-pipeline i.p.v. orders
+    if(st.key==='verkoop' && DATA.quote_pipeline && DATA.quote_pipeline.count){
+      const q=DATA.quote_pipeline;
+      h += '<div class="pl-stage">';
+      h += '<div class="pl-stage-head" title="Gewogen pipeline = som van open offertes × datagedreven winkans (conversie uit offertes >90 dagen)"><span class="pl-stage-name">Verkoop</span><span class="pl-stage-eur">'+eur(q.weighted)+'</span></div>';
+      h += '<div class="pl-cards">';
+      q.sectors.slice(0,6).forEach(function(s){
+        const col=(typeof indColor==='function')?indColor(s.name,0):'#0096D6';
+        const nm=String(s.name).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+        h += '<div class="pl-card" style="border-left-color:'+col+'" title="'+nm+': '+s.count+' open offertes · € '+Math.round(s.gross).toLocaleString('nl-NL')+' ongewogen · winkans '+Math.round(s.rate*100)+'%">'+
+               '<div class="pl-eur">'+eur(s.weighted)+'</div>'+
+               '<div class="pl-cnt">'+s.count+' offerte'+(s.count===1?'':'s')+' · '+Math.round(s.rate*100)+'%</div>'+
+               '<div class="pl-st"><span class="pl-sw" style="background:'+col+'"></span>'+nm+'</div>'+
+             '</div>';
+      });
+      h += '</div>';
+      h += '<div class="pl-empty-note" style="font-style:normal;color:var(--ink-3)">'+q.count+' open offertes · € '+Math.round(q.gross).toLocaleString('nl-NL')+' ongewogen · gem. winkans '+Math.round(q.overall*100)+'%</div>';
+      h += '</div>';
+      return;
+    }
     h += '<div class="pl-stage'+(st.count?'':' empty-stage')+'">';
     const stageStatuses = st.subs.reduce(function(a,s){ return a.concat(s.statuses); }, []);
     const stageActive = stageStatuses.length > 0 && stageStatuses.every(function(st2){ return fset.indexOf(st2) >= 0; });
@@ -3322,6 +3389,8 @@ function refreshDashboard(){
   if(!baseDataLoaded()){ showFilterEmpty(false); renderPipeline(); return; }  // echt geen AMFG-data
   if(!hasData()){ showFilterEmpty(true); return; }                            // wel data, maar filter = 0 orders
   showFilterEmpty(false);
+  if(DATA._quotes) computeQuotePipeline();   // herbereken sector-weging (bv. nadat industrie-cache laadt)
+  if(!QUOTES_LOADED){ QUOTES_LOADED=true; amfgFetchQuotes().then(function(ok){ if(ok) renderPipeline(); }); }
   renderBadges(); renderThisMonth(); renderKPIs(); renderClients(); renderCmpTable(); renderInsights(); renderChurnKPIs(); renderOrders(); renderPyramid();
   initCharts(); renderLast6Chart();
   renderPipeline();
