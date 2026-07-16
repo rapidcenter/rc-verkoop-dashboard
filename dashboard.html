@@ -2598,6 +2598,30 @@ async function amfgAugment(){
   return true;
 }
 function processExcelData(rows, fileName){
+  // Naam-normalisatie — canonieke ABC-definitie v1.1 (RC Source data lib\definities en regels\ABC_accounts_definitie.md):
+  // schrijfwijze-varianten van klantnamen samenvoegen. Genormaliseerde sleutel = kleine letters,
+  // punten/leestekens weg, rechtsvormen (B.V./N.V./GmbH/Ltd/Inc/AS…) afgestript. De weergavenaam =
+  // meest voorkomende schrijfwijze (bij gelijkstand de langste). CUSTOMER én BILLING COMPANY krijgen
+  // die canonieke naam, zodat ABC, klantenlijst, filter en pipeline overal consistent groeperen.
+  (function(){
+    function norm(s){ return String(s||'').toLowerCase().replace(/\./g,'').replace(/[^a-z0-9]+/g,' ').replace(/\b(bv|nv|gmbh|ltd|inc|as|sarl|srl|sa|ag|oy|ab|kg|co)\b/g,'').replace(/\s+/g,' ').trim(); }
+    const variants={};
+    (rows||[]).forEach(function(r){
+      const raw=String(r['CUSTOMER COMPANY']||r['BILLING COMPANY']||'').trim(); if(!raw) return;
+      const k=norm(raw); if(!k) return;
+      (variants[k]=variants[k]||{})[raw]=(variants[k][raw]||0)+1;
+    });
+    const disp={};
+    Object.keys(variants).forEach(function(k){ let best=null,bc=-1; const v=variants[k];
+      for(const nm in v){ const c=v[nm]; if(c>bc || (c===bc && best && nm.length>best.length)){ bc=c; best=nm; } }
+      disp[k]=best;
+    });
+    (rows||[]).forEach(function(r){
+      const raw=String(r['CUSTOMER COMPANY']||r['BILLING COMPANY']||'').trim(); if(!raw) return;
+      const k=norm(raw); const canon=(k&&disp[k])?disp[k]:raw;
+      r['CUSTOMER COMPANY']=canon; r['BILLING COMPANY']=canon;
+    });
+  })();
   const cleaned = rows.filter(r => {
     const status = String(r['TICKET STATUS']||'').toLowerCase();
     const price = parseFloat(r['TOTAL NET PRICE'])||0;
@@ -2866,6 +2890,8 @@ function processExcelData(rows, fileName){
   }).filter(function(o){ return !isNaN(o.y); });
 
   // Bereken account status A/B/C per klant (afgelopen 6 maanden, NET, niet-cancelled)
+  // CANONIEKE REGEL: RC Source data lib\definities en regels\ABC_accounts_definitie.md (leidend).
+  // LET OP: die definitie (v1.1) schrijft naam-normalisatie voor (rechtsvormen afstrippen); nog niet toegepast hier.
   const accountStatus = {};
   const clientMonths = {};
   const clientRev6m = {};
@@ -3230,6 +3256,7 @@ function clearPipelineFilter(){
   renderPipeline();
 }
 // ===== Verkoop-pipeline: open offertes (AMFG ticket-quote) met datagedreven winkans =====
+// CANONIEKE REGEL: RC Source data lib\definities en regels\rolling_forecast_definitie.md (leidend).
 // Offerte = OFFER-… ; status Active (open) / Accepted (gewonnen) / Rejected (verloren).
 // Winkans = conversie uit de UITONTWIKKELDE cohort (>90 dagen), overall + per sector.
 // Gewogen pipeline = som(open offertewaarde × winkans). Geen extra API-belasting op orders.
