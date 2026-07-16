@@ -520,7 +520,6 @@
   <button class="tab-btn" onclick="switchTab('klanten',this)">ABC Accounts</button>
   <button class="tab-btn" onclick="switchTab('industrie',this)">Industrie</button>
   <button class="tab-btn" onclick="switchTab('maanden',this)">Maandvergelijking</button>
-  <button class="tab-btn" onclick="switchTab('trends',this)">Trends &amp; Prognose</button>
   <button class="tab-btn" onclick="switchTab('piramide',this)">Piramide</button>
   <button class="tab-btn" onclick="switchTab('klantverloop',this)">Klantverloop</button>
 </div>
@@ -664,16 +663,6 @@
     <div id="cmpTable"></div>
   </section>
 
-  <section class="tab-section" id="tab-trends">
-    <div class="insight-grid" id="insightGrid"></div>
-    <div class="h1-banner">
-      <div class="h1-col"><div class="lbl">Verwachte H1 2026 (jan&ndash;jun)</div><div class="num" id="h1Forecast">&mdash;</div><div class="sub" id="h1Delta">&mdash;</div></div>
-      <div class="h1-col"><div class="lbl">Prognose H2 2026 (jul&ndash;dec)</div><div class="num" id="h2Forecast">&mdash;</div></div>
-      <div class="h1-col"><div class="lbl">Totaalprognose 2026</div><div class="num" id="totalForecast">&mdash;</div><div class="sub" id="totalDelta">&mdash;</div><div class="sub2" id="totalCtx"></div></div>
-    </div>
-    <div class="chart-box" style="margin-bottom:16px"><div class="chart-title"><span>Prognose omzet 2026</span><span class="sub">Actuals + forecast</span></div><div class="chart-canvas-wrap tall"><canvas id="chartForecast"></canvas></div></div>
-    <div class="chart-box"><div class="chart-title"><span>Prognose orders 2026</span><span class="sub">Actuals + forecast</span></div><div class="chart-canvas-wrap"><canvas id="chartForecastOrd"></canvas></div></div>
-  </section>
 
   <section class="tab-section" id="tab-klantverloop">
     <div class="churn-kpis" id="churnKpis"></div>
@@ -730,7 +719,9 @@
   .pl-stage-head{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-bottom:7px;padding-bottom:6px;border-bottom:1px solid var(--border)}
   .pl-stage-name{font-size:10.5px;font-weight:700;letter-spacing:.04em;color:var(--ink);text-transform:uppercase}
   .pl-stage-eur{font-size:12.5px;font-weight:700;color:var(--light-blue);white-space:nowrap}
-  .pl-cards{display:flex;gap:6px;flex-wrap:wrap}
+  .pl-cards{display:flex;gap:6px;flex-wrap:wrap;align-content:flex-start;max-height:118px;overflow-y:auto}
+  .pl-cards::-webkit-scrollbar{width:6px}
+  .pl-cards::-webkit-scrollbar-thumb{background:var(--border-2);border-radius:3px}
   .pl-card{flex:1 1 auto;min-width:82px;background:var(--navy-dark);border:1px solid var(--border);border-left:3px solid var(--rc-blue);border-radius:var(--radius-sm);padding:6px 8px}
   .pl-card .pl-eur{font-size:13px;font-weight:700;color:var(--white);line-height:1.1}
   .pl-card .pl-cnt{font-size:11px;color:var(--ink-3);margin-top:1px}
@@ -2089,25 +2080,6 @@ function initCharts(){
     renderMonthDayChart();
     const box = document.getElementById('monthDayBox'); if(box) box.scrollIntoView({behavior:'smooth', block:'nearest'});
   }})});
-  const fullLbl = MONTHS.slice(0);
-  const curYr = DATA.current_year;
-  const prevYr = DATA.current_year-1;
-  const curRevArr = DATA.years[curYr] ? DATA.years[curYr].monthly_revenue.slice(0) : Array(12).fill(0);
-  for(let i=DATA.ytd_month;i<12;i++) curRevArr[i]=null;
-  const fullPrevRev = DATA.full[prevYr] ? DATA.full[prevYr].monthly_revenue : Array(12).fill(0);
-  charts.fcRev = new Chart(document.getElementById('chartForecast'),{type:'line', data:{labels:fullLbl, datasets:[
-    {label:prevYr+' actual', data:fullPrevRev, borderColor:YEAR_COLORS[prevYr], backgroundColor:'transparent', borderWidth:2, tension:.35, pointRadius:2},
-    {label:curYr+' actual', data:curRevArr, borderColor:YEAR_COLORS[curYr], backgroundColor:'transparent', borderWidth:3, tension:.35, pointRadius:3},
-    {label:curYr+' prognose', data:DATA.forecast_revenue, borderColor:YEAR_COLORS[curYr], backgroundColor:'transparent', borderWidth:2, borderDash:[6,4], tension:.35, pointRadius:3}
-  ]}, options:Object.assign({}, CD, {scales:yAxisEuro()})});
-  const curOrdArr = DATA.years[curYr] ? DATA.years[curYr].monthly_orders.slice(0) : Array(12).fill(0);
-  for(let i=DATA.ytd_month;i<12;i++) curOrdArr[i]=null;
-  const fullPrevOrd = DATA.full[prevYr] ? DATA.full[prevYr].monthly_orders : Array(12).fill(0);
-  charts.fcOrd = new Chart(document.getElementById('chartForecastOrd'),{type:'line', data:{labels:fullLbl, datasets:[
-    {label:prevYr+' actual', data:fullPrevOrd, borderColor:YEAR_COLORS[prevYr], backgroundColor:'transparent', borderWidth:2, tension:.35, pointRadius:2},
-    {label:curYr+' actual', data:curOrdArr, borderColor:YEAR_COLORS[curYr], backgroundColor:'transparent', borderWidth:3, tension:.35, pointRadius:3},
-    {label:curYr+' prognose', data:DATA.forecast_orders, borderColor:YEAR_COLORS[curYr], backgroundColor:'transparent', borderWidth:2, borderDash:[6,4], tension:.35, pointRadius:3}
-  ]}, options:CD});
   charts.churn = new Chart(document.getElementById('chartChurn'),{type:'bar', data:{labels:['Behouden','Weggevallen','Nieuw'],
     datasets:[{data:[DATA.churn.retained_count, DATA.churn.churned_count, DATA.churn.new_count], backgroundColor:['#16A34A', '#DC2626', '#0096D6'], borderWidth:0}]},
     plugins:[makeLabelsPlugin(fmtNum)], options:Object.assign({}, CD, {scales:yAxisCount(), plugins:Object.assign({}, CD.plugins, {legend:{display:false}})})});
@@ -3391,7 +3363,7 @@ function refreshDashboard(){
   showFilterEmpty(false);
   if(DATA._quotes) computeQuotePipeline();   // herbereken sector-weging (bv. nadat industrie-cache laadt)
   if(!QUOTES_LOADED){ QUOTES_LOADED=true; amfgFetchQuotes().then(function(ok){ if(ok) renderPipeline(); }); }
-  renderBadges(); renderThisMonth(); renderKPIs(); renderClients(); renderCmpTable(); renderInsights(); renderChurnKPIs(); renderOrders(); renderPyramid();
+  renderBadges(); renderThisMonth(); renderKPIs(); renderClients(); renderCmpTable(); renderChurnKPIs(); renderOrders(); renderPyramid();
   initCharts(); renderLast6Chart();
   renderPipeline();
   // Industrie-tab live bijwerken als die open staat en de data al geladen is
