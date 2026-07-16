@@ -703,6 +703,13 @@
 
 <!-- ====== WERKSTROOM-STROOK (open orders pipeline) ====== -->
 <style>
+  /* Layout: pagina vult exact 1 scherm. Topbalken + werkstroombalk houden hun hoogte,
+     het middengebied (KPI's + grafiek + orderlijst) is flexibel en scrollt intern.
+     Zo blijft de ONDERKANT van de werkstroombalk altijd zichtbaar. */
+  body{display:flex;flex-direction:column;height:100vh;min-height:0;overflow:hidden}
+  body > .navbar, body > .toolbar, body > .tabnav, body > .client-filter-bar, body > .filterbar, body > .global-filter{flex:0 0 auto}
+  body > main{flex:1 1 auto;min-height:0;overflow-y:auto}
+  body > #pipelineStrip{flex:0 0 auto}
   .pipeline-strip{margin:2px 16px 12px;padding:9px 14px 11px;background:linear-gradient(180deg,var(--navy-dark),var(--navy));border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow)}
   .pipeline-strip.empty{display:none}
   .pl-head{display:flex;align-items:baseline;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:8px}
