@@ -119,6 +119,10 @@
   .global-filter .gf-chip .gf-dot{width:9px;height:9px;border-radius:50%;display:inline-block}
   .global-filter .gf-chip.off .gf-dot{filter:grayscale(1)}
   .global-filter .gf-chip.active,.global-filter .gf-chip.sel{background:var(--rc-blue);border-color:var(--rc-blue)!important;color:#fff;font-weight:700}
+  .global-filter .gf-chip .gf-rev{margin-left:7px;font-weight:700;color:var(--light-blue);font-variant-numeric:tabular-nums}
+  .global-filter .gf-chip.sel .gf-rev{color:#fff}
+  .global-filter .gf-chip.off .gf-rev{color:var(--ink-4)}
+  .global-filter .gf-chip.gf-all .gf-rev{color:var(--ink-2)}
   .global-filter .gf-reset{margin-left:auto;background:var(--rc-blue);color:#fff;border:0;border-radius:999px;padding:4px 12px;font:700 11px 'Roboto';cursor:pointer}
   main{padding:20px 24px;max-width:none}
   .tab-section{display:none}
@@ -2457,6 +2461,17 @@ function sectorsWithOrders(){
   ALL_ROWS.forEach(function(r){ set.add(industryOfRow(r)); });
   return set;
 }
+// Omzet per sector (lopend jaar, NET, excl. cancelled) — voor de labels op de sector-chips.
+function sectorRevenue(){
+  const m={}; const cy=(typeof DATA!=='undefined'&&DATA.current_year)||new Date().getFullYear();
+  (typeof ALL_ROWS!=='undefined'?(ALL_ROWS||[]):[]).forEach(function(r){
+    const st=String(r['TICKET STATUS']||'').toLowerCase(); if(st.indexOf('cancel')>=0) return;
+    const net=parseFloat(r['TOTAL NET PRICE'])||0; if(net<=0) return;
+    const d=new Date(r['ORDER DATE']); if(isNaN(d)||d.getFullYear()!==cy) return;
+    const s=industryOfRow(r); m[s]=(m[s]||0)+net;
+  });
+  return m;
+}
 function renderGlobalFilterBar(){
   const el=document.getElementById('globalFilter'); if(!el) return;
   if(!hasData()){ el.style.display='none'; return; }
@@ -2465,8 +2480,12 @@ function renderGlobalFilterBar(){
   let html='<span class="gf-lbl">Filter</span>'+
     '<span class="gf-acc-group">'+accBtn('all','Alle')+accBtn('A','A')+accBtn('B','B')+accBtn('C','C')+'</span>'+
     '<span class="gf-sep"></span><span class="gf-chips">';
-  // "Alle sectoren"-chip
-  html+='<button type="button" class="gf-chip gf-all'+(!INDUSTRY_SEL.length?' active':'')+'" onclick="setGlobalSectorAll()">Alle sectoren</button>';
+  // Omzet per sector (lopend jaar) als label achter de chips.
+  const rev = sectorRevenue();
+  const totRev = Object.keys(rev).reduce(function(a,k){ return a+rev[k]; }, 0);
+  const revTag = function(v){ return v>0 ? '<span class="gf-rev">'+fmtEurShort(v)+'</span>' : ''; };
+  // "Alle sectoren"-chip (met totale omzet lopend jaar)
+  html+='<button type="button" class="gf-chip gf-all'+(!INDUSTRY_SEL.length?' active':'')+'" onclick="setGlobalSectorAll()">Alle sectoren'+revTag(totRev)+'</button>';
   // Alleen sectoren MET orders tonen (zodra de industrie-cache geladen is). Is de cache nog
   // niet geladen, dan tonen we alles zodat een klik de lazy-load kan starten.
   const present = sectorsWithOrders();
@@ -2476,7 +2495,7 @@ function renderGlobalFilterBar(){
     const c=indColor(n, ALL_SECTORS.indexOf(n));   // stabiele kleur o.b.v. originele index
     const sel = (INDUSTRY_SEL.indexOf(n)>=0);
     const off = (INDUSTRY_SEL.length && !sel);   // niet-geselecteerde sectoren dimmen zodra er ≥1 gekozen is
-    html+='<button type="button" class="gf-chip'+(off?' off':'')+(sel?' sel':'')+'" onclick="setGlobalSector(\''+n.replace(/\x27/g,"\\\x27")+'\')" style="border-color:'+(off?'var(--border-2)':c)+'"><span class="gf-dot" style="background:'+c+'"></span>'+n+'</button>';
+    html+='<button type="button" class="gf-chip'+(off?' off':'')+(sel?' sel':'')+'" onclick="setGlobalSector(\''+n.replace(/\x27/g,"\\\x27")+'\')" style="border-color:'+(off?'var(--border-2)':c)+'"><span class="gf-dot" style="background:'+c+'"></span>'+n+revTag(rev[n]||0)+'</button>';
   });
   html+='</span><span id="gfIndLoading" style="display:none;color:var(--light-blue);font-size:11px;margin-left:6px">sectoren laden&hellip;</span>';
   if(ACCOUNT_FILTER || INDUSTRY_SEL.length || CLIENT_FILTER) html+='<button type="button" class="gf-reset" onclick="clearGlobalFilters()">&times; reset</button>';
