@@ -72,6 +72,7 @@
   .yr-btn{padding:6px 14px;background:transparent;border:1px solid var(--border-2);color:var(--ink-2);font-family:'Roboto';font-size:12px;font-weight:500;letter-spacing:.05em;text-transform:uppercase;cursor:pointer;border-radius:999px;transition:all .15s}
   .yr-btn:hover{border-color:var(--rc-blue);background:rgba(0,150,214,.1);color:var(--white)}
   .yr-btn.active{background:var(--navy);border-color:var(--white);color:var(--white)}
+  .ind-modebar .yr-btn.active{background:var(--rc-blue);border-color:var(--rc-blue);color:#fff}
   .yr-btn.active[data-year="2024"]{background:var(--light-blue);border-color:var(--light-blue);color:#fff}
   .yr-btn.active[data-year="2025"]{background:var(--orange);border-color:var(--orange);color:#fff}
   .yr-btn.active[data-year="2026"]{background:var(--rc-blue);border-color:var(--rc-blue);color:#fff}
@@ -3687,16 +3688,20 @@ function renderIndustry(){
   // Reageert op de globale filterbalk (sector + A/B/C) omdat de onderliggende data al gefilterd
   // is. Elke sector = één lijn; klik in de legenda om lijnen te tonen/verbergen.
   // Prognosejaren (indien aan) gestippeld voortgezet.
+  // In 'per jaar' + prognose: toon het huidige (nog lopende) jaar als voljaar-prognose (run-rate),
+  // en stippel de lijn al vanaf het laatste volledige jaar (bv. 2025 -> 2026 -> 2027 -> 2028).
+  const projCur = (mode==='year' && showFc && projF>1);
+  const dashFrom = projCur ? (lastRealIdx-1) : lastRealIdx;
   const lineDs = names.map(function(n){ const c=colorOf(n);
-    const data = years.map(function(y){ return rev(n,y); }).concat(showFc ? fcRev[n] : []);
+    const data = years.map(function(y){ return (projCur && y===cur) ? Math.round(rev(n,y)*projF) : rev(n,y); }).concat(showFc ? fcRev[n] : []);
     return {label:n, data:data, borderColor:c, backgroundColor:c, tension:.3, borderWidth:2.5,
       pointRadius:3, pointHoverRadius:7, pointBackgroundColor:c, fill:false, spanGaps:true,
-      segment:{ borderDash:function(ctx){ return ctx.p0DataIndex>=lastRealIdx ? [6,5] : undefined; } } };
+      segment:{ borderDash:function(ctx){ return ctx.p0DataIndex>=dashFrom ? [6,5] : undefined; } } };
   });
   // Dikke TOTAAL-lijn: som van de ZICHTBARE sectoren (herberekend bij legenda-toggle).
   const totData = labels.map(function(_,idx){ let s=null; lineDs.forEach(function(d){ const v=d.data[idx]; if(v!=null) s=(s||0)+v; }); return s; });
   lineDs.push({label:'Totaal', _isTotal:true, data:totData, borderColor:'#FFFFFF', backgroundColor:'#FFFFFF', borderWidth:4, pointRadius:3.5, pointHoverRadius:8, tension:.3, fill:false, spanGaps:true, order:99,
-    segment:{ borderDash:function(ctx){ return ctx.p0DataIndex>=lastRealIdx ? [7,5] : undefined; } } });
+    segment:{ borderDash:function(ctx){ return ctx.p0DataIndex>=dashFrom ? [7,5] : undefined; } } });
   function recomputeTotal(chart){
     const ds=chart.data.datasets; const tot=ds.find(function(d){return d._isTotal;}); if(!tot) return;
     const L=chart.data.labels.length; const arr=new Array(L).fill(null);
@@ -3729,7 +3734,7 @@ function renderIndustry(){
         legend:{display:true, position:'top', labels:{color:'#CFD2D3', font:{size:11,family:'Roboto'}, boxWidth:12, padding:8, usePointStyle:true},
           onClick:function(e,item,legend){ const ci=legend.chart; Chart.defaults.plugins.legend.onClick.call(this,e,item,legend); recomputeTotal(ci); ci.update(); }},
         tooltip:Object.assign({}, CD.plugins.tooltip, {callbacks:{
-          title:function(items){ const l=items[0].label; return (+l>cur) ? (l+' (prognose)') : l; },
+          title:function(items){ const l=items[0].label; return ((+l>cur)||(projCur&&+l===cur)) ? (l+' (prognose)') : l; },
           label:function(c){ return c.dataset.label+': '+fmtEur(c.parsed.y||0); }
         }})
       }),
