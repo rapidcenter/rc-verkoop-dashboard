@@ -3693,6 +3693,30 @@ function renderIndustry(){
       pointRadius:3, pointHoverRadius:7, pointBackgroundColor:c, fill:false, spanGaps:true,
       segment:{ borderDash:function(ctx){ return ctx.p0DataIndex>=lastRealIdx ? [6,5] : undefined; } } };
   });
+  // Dikke TOTAAL-lijn: som van de ZICHTBARE sectoren (herberekend bij legenda-toggle).
+  const totData = labels.map(function(_,idx){ let s=null; lineDs.forEach(function(d){ const v=d.data[idx]; if(v!=null) s=(s||0)+v; }); return s; });
+  lineDs.push({label:'Totaal', _isTotal:true, data:totData, borderColor:'#FFFFFF', backgroundColor:'#FFFFFF', borderWidth:4, pointRadius:3.5, pointHoverRadius:8, tension:.3, fill:false, spanGaps:true, order:99,
+    segment:{ borderDash:function(ctx){ return ctx.p0DataIndex>=lastRealIdx ? [7,5] : undefined; } } });
+  function recomputeTotal(chart){
+    const ds=chart.data.datasets; const tot=ds.find(function(d){return d._isTotal;}); if(!tot) return;
+    const L=chart.data.labels.length; const arr=new Array(L).fill(null);
+    ds.forEach(function(d,i){ if(d._isTotal || !chart.isDatasetVisible(i)) return;
+      d.data.forEach(function(v,idx){ if(v==null) return; arr[idx]=(arr[idx]||0)+v; }); });
+    tot.data=arr;
+  }
+  // waarde-labels in K's: altijd op de Totaal-lijn; op sectoren alleen als er ≤4 zichtbaar zijn.
+  const indKLabels={ id:'indklbl', afterDatasetsDraw:function(chart){
+    const ds=chart.data.datasets; let visSec=0;
+    ds.forEach(function(d,i){ if(!d._isTotal && chart.isDatasetVisible(i)) visSec++; });
+    const ctx=chart.ctx; ctx.save(); ctx.textAlign='center';
+    ds.forEach(function(d,i){ if(!chart.isDatasetVisible(i)) return; const isTot=!!d._isTotal;
+      if(!isTot && visSec>4) return;
+      const meta=chart.getDatasetMeta(i); ctx.font=isTot?'700 11px Roboto':'600 11px Roboto';
+      meta.data.forEach(function(pt,idx){ const v=d.data[idx]; if(v==null||v===0||!pt) return;
+        ctx.fillStyle=isTot?'#FFFFFF':d.borderColor; ctx.fillText(fmtEurK(v), pt.x, pt.y-(isTot?10:8)); });
+    });
+    ctx.restore();
+  }};
   const suf = (mode==='ytd' ? '— YTD (t/m zelfde dag)' : '— per volledig jaar') + (showFc ? ' · incl. prognose 2 jr' : '');
   const st=function(id,t){ const e=document.getElementById(id); if(e) e.textContent=t; };
   st('indT1','Omzet per sector '+suf);
@@ -3700,9 +3724,10 @@ function renderIndustry(){
   charts.indRevYear=new Chart(document.getElementById('chartIndRevYear'),{ type:'line',
     data:{labels:labels, datasets:lineDs},
     options:Object.assign({}, CD, {
-      layout:{padding:{top:16,bottom:8,left:12,right:12}},
+      layout:{padding:{top:22,bottom:8,left:12,right:12}},
       plugins:Object.assign({}, CD.plugins, {
-        legend:{display:true, position:'top', labels:{color:'#CFD2D3', font:{size:11,family:'Roboto'}, boxWidth:12, padding:8, usePointStyle:true}},
+        legend:{display:true, position:'top', labels:{color:'#CFD2D3', font:{size:11,family:'Roboto'}, boxWidth:12, padding:8, usePointStyle:true},
+          onClick:function(e,item,legend){ const ci=legend.chart; Chart.defaults.plugins.legend.onClick.call(this,e,item,legend); recomputeTotal(ci); ci.update(); }},
         tooltip:Object.assign({}, CD.plugins.tooltip, {callbacks:{
           title:function(items){ const l=items[0].label; return (+l>cur) ? (l+' (prognose)') : l; },
           label:function(c){ return c.dataset.label+': '+fmtEur(c.parsed.y||0); }
@@ -3712,7 +3737,7 @@ function renderIndustry(){
         x:Object.assign({}, CD.scales.x, {ticks:Object.assign({}, CD.scales.x.ticks, {font:{size:12,weight:'600'}})}),
         y:Object.assign({}, CD.scales.y, {beginAtZero:true, ticks:Object.assign({}, CD.scales.y.ticks, {callback:function(v){return fmtEurShort(v);}})})
       }
-    }) });
+    }), plugins:[indKLabels] });
   setTimeout(function(){ Object.values(charts).forEach(function(c){ c&&c.resize&&c.resize(); }); },30);
 }
 
