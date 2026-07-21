@@ -631,20 +631,8 @@
         <span style="font-size:11px;color:var(--ink-3)">Filter A/B/C &amp; sectoren via de balk bovenaan het dashboard</span>
       </div>
       <div class="chart-box" style="margin-bottom:16px">
-        <div class="chart-title"><span id="indT1">Omzet per industrie</span><span class="sub">NET &euro;</span></div>
-        <div class="chart-canvas-wrap tall"><canvas id="chartIndRevYear"></canvas></div>
-      </div>
-      <div class="chart-box" style="margin-bottom:16px">
-        <div class="chart-title"><span id="indT2">Marktaandeel per industrie</span><span class="sub">% van totale omzet &middot; 100% gestapeld</span></div>
-        <div class="chart-canvas-wrap tall"><canvas id="chartIndShare"></canvas></div>
-      </div>
-      <div class="chart-box" style="margin-bottom:16px">
-        <div class="chart-title"><span id="indT3">Aantal orders per industrie</span><span class="sub">Aantal orders</span></div>
-        <div class="chart-canvas-wrap tall"><canvas id="chartIndOrdYear"></canvas></div>
-      </div>
-      <div class="chart-box" style="margin-bottom:16px">
-        <div class="chart-title"><span id="indT4">Gemiddelde orderwaarde per industrie</span><span class="sub">NET &euro; per order</span></div>
-        <div class="chart-canvas-wrap tall"><canvas id="chartIndAov"></canvas></div>
+        <div class="chart-title"><span id="indT1">Omzet per sector</span><span class="sub">NET &euro; &middot; lijn per sector &middot; klik in legenda om te tonen/verbergen</span></div>
+        <div class="chart-canvas-wrap tall" style="min-height:min(520px, calc(100vh - 380px))"><canvas id="chartIndRevYear"></canvas></div>
       </div>
     </div>
   </section>
@@ -3695,65 +3683,36 @@ function renderIndustry(){
   const ord=function(n,y){ return Math.round((agg[n][ordKey][y])||0); };
   const aov=function(n,y){ const r=(agg[n][revKey][y])||0, o=(agg[n][ordKey][y])||0; return o? Math.round(r/o):0; };
   const share=function(n,y){ const t=totY[y]; return t? +(((agg[n][revKey][y])||0)/t*100).toFixed(1):0; };
-  // ===== Gegroepeerde staafdiagrammen: X = sectoren, per sector één staaf per jaar =====
-  const cols=years.concat(fcYears);                       // bv. [2024,2025,2026,(2027,2028)]
-  const YRPAL=['#59BBE4','#F59E0B','#0096D6','#A78BFA','#22C55E'];
-  function yCol(y){ const m=(typeof YEAR_COLORS!=='undefined')?YEAR_COLORS:{}; return m[y]||YRPAL[cols.indexOf(y)%YRPAL.length]; }
-  function hexA(h,a){ const x=String(h).replace('#',''); if(x.length!==6) return h; return 'rgba('+parseInt(x.slice(0,2),16)+','+parseInt(x.slice(2,4),16)+','+parseInt(x.slice(4,6),16)+','+a+')'; }
-  // datasets: één per jaar (reëel); prognosejaren als extra, lichtere staven
-  function barDs(realFn, fcFn){
-    return cols.map(function(y){
-      const fc=(y>cur); const k=fcYears.indexOf(y); const c=yCol(y);
-      const data=names.map(function(n){ return fc ? (fcFn?fcFn(n)[k]:null) : realFn(n,y); });
-      return {label:String(y)+(fc?' (prognose)':''), data:data,
-        backgroundColor:fc?hexA(c,0.40):c, borderColor:c, borderWidth:fc?1:0,
-        categoryPercentage:0.82, barPercentage:0.94 };
-    });
-  }
-  function opts(fmtAxis, fmtTip, ymax){
-    return Object.assign({}, CD, {
-      layout:{padding:{top:16,bottom:8,left:12,right:12}},
-      plugins:Object.assign({}, CD.plugins, {
-        legend:{display:true, position:'top', labels:{color:'#CFD2D3', font:{size:11,family:'Roboto'}, boxWidth:12, padding:8}},
-        tooltip:Object.assign({}, CD.plugins.tooltip, {callbacks:{
-          title:function(items){ return items[0].label; },
-          label:function(c){ return c.dataset.label+': '+fmtTip(c.parsed.y||0); }
-        }})
-      }),
-      scales:{
-        x:Object.assign({}, CD.scales.x, {ticks:Object.assign({}, CD.scales.x.ticks, {font:{size:11,weight:'600'}, maxRotation:45, minRotation:45, autoSkip:false})}),
-        y:Object.assign({}, CD.scales.y, {beginAtZero:true, max:(ymax||undefined), ticks:Object.assign({}, CD.scales.y.ticks, {callback:fmtAxis})})
-      }
-    });
-  }
+  // ===== Eén lijngrafiek: omzet per sector over de jaren =====
+  // Reageert op de globale filterbalk (sector + A/B/C) omdat de onderliggende data al gefilterd
+  // is. Elke sector = één lijn; klik in de legenda om lijnen te tonen/verbergen.
+  // Prognosejaren (indien aan) gestippeld voortgezet.
+  const lineDs = names.map(function(n){ const c=colorOf(n);
+    const data = years.map(function(y){ return rev(n,y); }).concat(showFc ? fcRev[n] : []);
+    return {label:n, data:data, borderColor:c, backgroundColor:c, tension:.3, borderWidth:2.5,
+      pointRadius:3, pointHoverRadius:7, pointBackgroundColor:c, fill:false, spanGaps:true,
+      segment:{ borderDash:function(ctx){ return ctx.p0DataIndex>=lastRealIdx ? [6,5] : undefined; } } };
+  });
   const suf = (mode==='ytd' ? '— YTD (t/m zelfde dag)' : '— per volledig jaar') + (showFc ? ' · incl. prognose 2 jr' : '');
   const st=function(id,t){ const e=document.getElementById(id); if(e) e.textContent=t; };
   st('indT1','Omzet per sector '+suf);
-  st('indT2','Marktaandeel per sector '+suf);
-  st('indT3','Aantal orders per sector '+suf);
-  st('indT4','Gemiddelde orderwaarde per sector '+suf);
-  const shareFc=function(n){ return [ totFc[0]? +(fcRev[n][0]/totFc[0]*100).toFixed(1):0, totFc[1]? +(fcRev[n][1]/totFc[1]*100).toFixed(1):0 ]; };
-  const aovFc=function(n){ return [ fcOrd[n][0]? Math.round(fcRev[n][0]/fcOrd[n][0]):0, fcOrd[n][1]? Math.round(fcRev[n][1]/fcOrd[n][1]):0 ]; };
-  // 1) Omzet
   if(charts.indRevYear) charts.indRevYear.destroy();
-  charts.indRevYear=new Chart(document.getElementById('chartIndRevYear'),{ type:'bar',
-    data:{labels:names, datasets:barDs(rev, function(n){return fcRev[n];})},
-    options:opts(function(v){return fmtEurShort(v);}, function(v){return fmtEur(v);}) });
-  // 2) Marktaandeel (aandeel per sector per jaar)
-  if(charts.indShare) charts.indShare.destroy();
-  charts.indShare=new Chart(document.getElementById('chartIndShare'),{ type:'bar',
-    data:{labels:names, datasets:barDs(share, shareFc)},
-    options:opts(function(v){return v+'%';}, function(v){return (v||0).toFixed(1)+'%';}) });
-  // 3) Aantal orders
-  if(charts.indOrdYear) charts.indOrdYear.destroy();
-  charts.indOrdYear=new Chart(document.getElementById('chartIndOrdYear'),{ type:'bar',
-    data:{labels:names, datasets:barDs(ord, function(n){return fcOrd[n];})},
-    options:opts(function(v){return fmtNum(v);}, function(v){return fmtNum(v)+' orders';}) });
-  // 4) Gemiddelde orderwaarde
-  if(charts.indAov) charts.indAov.destroy();
-  charts.indAov=new Chart(document.getElementById('chartIndAov'),{ type:'bar',
-    data:{labels:names, datasets:barDs(aov, aovFc)},
-    options:opts(function(v){return fmtEurShort(v);}, function(v){return fmtEur(v);}) });
+  charts.indRevYear=new Chart(document.getElementById('chartIndRevYear'),{ type:'line',
+    data:{labels:labels, datasets:lineDs},
+    options:Object.assign({}, CD, {
+      layout:{padding:{top:16,bottom:8,left:12,right:12}},
+      plugins:Object.assign({}, CD.plugins, {
+        legend:{display:true, position:'top', labels:{color:'#CFD2D3', font:{size:11,family:'Roboto'}, boxWidth:12, padding:8, usePointStyle:true}},
+        tooltip:Object.assign({}, CD.plugins.tooltip, {callbacks:{
+          title:function(items){ const l=items[0].label; return (+l>cur) ? (l+' (prognose)') : l; },
+          label:function(c){ return c.dataset.label+': '+fmtEur(c.parsed.y||0); }
+        }})
+      }),
+      scales:{
+        x:Object.assign({}, CD.scales.x, {ticks:Object.assign({}, CD.scales.x.ticks, {font:{size:12,weight:'600'}})}),
+        y:Object.assign({}, CD.scales.y, {beginAtZero:true, ticks:Object.assign({}, CD.scales.y.ticks, {callback:function(v){return fmtEurShort(v);}})})
+      }
+    }) });
   setTimeout(function(){ Object.values(charts).forEach(function(c){ c&&c.resize&&c.resize(); }); },30);
 }
 
