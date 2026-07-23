@@ -2482,7 +2482,7 @@ function renderGlobalFilterBar(){
   // Omzet per sector (lopend jaar) als label achter de chips.
   const rev = sectorRevenue();
   const totRev = Object.keys(rev).reduce(function(a,k){ return a+rev[k]; }, 0);
-  const revTag = function(v){ return v>0 ? '<span class="gf-rev">'+fmtEurShort(v)+'</span>' : ''; };
+  const revTag = function(v){ return v>0 ? '<span class="gf-rev">'+fmtEurK(v)+'</span>' : ''; };
   // "Alle sectoren"-chip (met totale omzet lopend jaar)
   html+='<button type="button" class="gf-chip gf-all'+(!INDUSTRY_SEL.length?' active':'')+'" onclick="setGlobalSectorAll()">Alle sectoren'+revTag(totRev)+'</button>';
   // Alleen sectoren MET orders tonen (zodra de industrie-cache geladen is). Is de cache nog
@@ -3328,8 +3328,11 @@ function computeQuotePipeline(){
   const weighted=sectors.reduce(function(a,s){return a+s.weighted;},0);
   DATA.quote_pipeline={count:open.length, gross:gross, weighted:weighted, overall:overall, sectors:sectors};
 }
-// ===== Nog te factureren: open orders gebucket op shipping-deadline (MAX per order uit parts) =====
-// Deadline per order = MAX(shippingDeadline) over alle parts (AMFG ticket-model/list-with-count).
+// ===== Nog te factureren: open orders gebucket op shipping-deadline (MAX per order) =====
+// CANONIEKE REGEL: RC Source data lib\definities en regels\facturatie_forecast_definitie.md (leidend).
+// Deadline per order = MAX(shippingDeadline) over alle parts, opgehaald via het LICHTE
+// endpoint 'ticket-model/project' en gegroepeerd per projectId (ORDER-nr) — IDENTIEK aan het
+// productiedashboard (zelfde bron/definitie), zodat de cijfers overeenkomen.
 // Nog te factureren = alle open orders (niet-cancelled, niet 'Order finished'), incl. New order.
 // Buckets: achterstallig (deadline verstreken) + deze maand + 2 maanden vooruit.
 let DEADLINES_LOADED=false;
@@ -3341,33 +3344,35 @@ async function amfgFetchDeadlines(){
   (ALL_ROWS||[]).forEach(function(r){ const st=String(r['TICKET STATUS']||'').toLowerCase();
     if(st.indexOf('cancel')>=0 || st.indexOf('order finished')>=0) return;
     if((parseFloat(r['TOTAL NET PRICE'])||0)<=0) return;
-    const t=String(r['TICKET ID']||''); if(t) openSet.add(t); });
-  if(!openSet.size){ DATA._deadlineByTicket={}; computeInvoiceForecast(); return true; }
-  const from=new Date(); from.setMonth(from.getMonth()-15); const fromStr=from.toISOString().slice(0,10);
+    const p=String(r['PROJECT ID']||''); if(p) openSet.add(p); });
+  if(!openSet.size){ DATA._deadlineByProject={}; computeInvoiceForecast(); return true; }
+  const fromISO=new Date(Date.now()-12*30*86400000).toISOString();   // ~12 mnd terug
   const dl={}; const found=new Set();
-  for(let off=0; off<40000; off+=1000){
-    let r; try{ r=await fetch('/management-service/api/v1/ticket-model/list-with-count?limit=1000&offset='+off+'&sort.by=orderCreatedAt&sort.direction=desc&from.orderCreatedAt='+fromStr+'&stateFilters=%7B%7D&search.filter=',{headers:H}); }catch(e){ break; }
+  for(let off=0, pg=0; pg<60; off+=200, pg++){
+    const q='limit=200&offset='+off+'&sort.direction=desc&sort.by=orderCreatedAt&timezone=2&stateFilters=%7B%7D&search.filter=&from.orderCreatedAt='+encodeURIComponent('"'+fromISO+'"');
+    let r; try{ r=await fetch('/management-service/api/v1/ticket-model/project?'+q,{headers:H}); }catch(e){ break; }
     if(!r.ok) break;
     let d; try{ d=await r.json(); }catch(e){ break; }
     const rows=Array.isArray(d)?d:(d.rows||[]);
-    rows.forEach(function(p){ const t=String(p.ticketId||''); if(!t) return;
-      const sd=p.shippingDeadline; if(sd){ const day=sd.slice(0,10); if(!dl[t]||day>dl[t]) dl[t]=day; }
-      if(openSet.has(t)) found.add(t); });
-    if(rows.length<1000) break;
+    rows.forEach(function(p){ const pid=String(p.projectId||''); if(!pid) return;
+      const sd=p.shippingDeadline; if(sd){ const day=sd.slice(0,10); if(!dl[pid]||day>dl[pid]) dl[pid]=day; }   // MAX per order
+      if(openSet.has(pid)) found.add(pid); });
+    if(rows.length<200) break;
     if(found.size>=openSet.size) break;   // alle open orders gedekt
   }
-  DATA._deadlineByTicket=dl; computeInvoiceForecast(); return true;
+  DATA._deadlineByProject=dl; computeInvoiceForecast(); return true;
 }
 function computeInvoiceForecast(){
   const rows=(typeof applyActiveRowFilters==='function') ? applyActiveRowFilters(ALL_ROWS||[]) : (ALL_ROWS||[]);
   const now=new Date(), cy=now.getFullYear(), cm=now.getMonth();   // cm 0-based
   const firstThis=new Date(cy,cm,1);
+  const dl=DATA._deadlineByProject||{};
   const b={overdue:{n:0,eur:0}, months:[{n:0,eur:0},{n:0,eur:0},{n:0,eur:0}], nodl:{n:0,eur:0}, total:{n:0,eur:0}};
   rows.forEach(function(r){ const st=String(r['TICKET STATUS']||'').toLowerCase();
     if(st.indexOf('cancel')>=0 || st.indexOf('order finished')>=0) return;
     const net=parseFloat(r['TOTAL NET PRICE'])||0; if(net<=0) return;
     b.total.n++; b.total.eur+=net;
-    const day=String(r['MIN DEADLINE']||'').slice(0,10);
+    const day=dl[String(r['PROJECT ID']||'')]||'';
     const d=day?new Date(day):null;
     if(!d||isNaN(d)){ b.nodl.n++; b.nodl.eur+=net; return; }
     if(d<firstThis){ b.overdue.n++; b.overdue.eur+=net; return; }
@@ -3474,7 +3479,8 @@ function refreshDashboard(){
   showFilterEmpty(false);
   if(DATA._quotes) computeQuotePipeline();   // herbereken sector-weging (bv. nadat industrie-cache laadt)
   if(!QUOTES_LOADED){ QUOTES_LOADED=true; amfgFetchQuotes().then(function(ok){ if(ok) renderPipeline(); }); }
-  computeInvoiceForecast();   // nog te factureren o.b.v. minShippingDeadline uit de orders-feed
+  computeInvoiceForecast();   // nog te factureren o.b.v. MAX(shippingDeadline) per order
+  if(!DEADLINES_LOADED){ DEADLINES_LOADED=true; amfgFetchDeadlines().then(function(ok){ if(ok) renderPipeline(); }); }
   refreshIndustriesQuiet();   // sector-cache stil op de achtergrond verversen als >24u oud
   renderBadges(); renderThisMonth(); renderKPIs(); renderClients(); renderCmpTable(); renderChurnKPIs(); renderOrders(); renderPyramid();
   initCharts(); renderLast6Chart();
