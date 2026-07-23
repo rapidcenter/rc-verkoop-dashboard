@@ -3728,7 +3728,7 @@ function renderIndustry(){
   const lastRealIdx = years.length-1;
   // fractie van huidig jaar verstreken (voor voljaar-projectie in 'per jaar'-modus)
   const frac=(DATA.ytd_day_of_year||365)/365;
-  const projF = (mode==='year' && frac>0.02 && frac<1) ? (1/frac) : 1;
+  let projF = (mode==='year' && frac>0.02 && frac<1) ? (1/frac) : 1;
   // alle industrieën gesorteerd op totale omzet (gekozen modus); Onbekend achteraan
   const totRev=function(n){ return years.reduce(function(s,y){return s+((agg[n][revKey][y])||0);},0); };
   const allNames=Object.keys(agg).sort(function(a,b){
@@ -3737,6 +3737,13 @@ function renderIndustry(){
     return totRev(b)-totRev(a);
   });
   const names=allNames;   // sector-filtering gebeurt globaal (op dataniveau)
+  // Lijn de huidige-jaar-projectie uit met de 'Deze maand'-prognose (DATA.year_forecast.revenue):
+  // vervang de run-rate door de factor die het YTD-totaal op de jaarprognose brengt, zodat de
+  // Industrie-totaallijn hetzelfde 2026-prognosebedrag toont als de hero op 'Deze maand'.
+  if(mode==='year' && showFc && DATA.year_forecast && DATA.year_forecast.revenue>0){
+    const _act=names.reduce(function(s,n){ return s+((agg[n][revKey][cur])||0); }, 0);
+    if(_act>0) projF = DATA.year_forecast.revenue/_act;
+  }
   const colorOf=function(n){ return indColor(n, allNames.indexOf(n)); };
   // gemiddelde jaargroei (geometrisch, geklemd 0,5-2,0)
   function growthOf(arr){ const r=[]; for(let i=1;i<arr.length;i++){ if(arr[i-1]>0 && arr[i]>0) r.push(arr[i]/arr[i-1]); } if(!r.length) return 1; let p=1; r.forEach(function(x){p*=x;}); return Math.max(0.5, Math.min(2, Math.pow(p, 1/r.length))); }
