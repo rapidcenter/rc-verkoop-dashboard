@@ -3794,12 +3794,13 @@ function renderIndustry(){
   const indKLabels={ id:'indklbl', afterDatasetsDraw:function(chart){
     const ds=chart.data.datasets; let visSec=0;
     ds.forEach(function(d,i){ if(!d._isTotal && chart.isDatasetVisible(i)) visSec++; });
-    const ctx=chart.ctx; ctx.save(); ctx.textAlign='center';
+    const ctx=chart.ctx; ctx.save(); ctx.textAlign='center'; const curStr=String(cur);
     ds.forEach(function(d,i){ if(!chart.isDatasetVisible(i)) return; const isTot=!!d._isTotal;
       if(!isTot && visSec>4) return;
-      const meta=chart.getDatasetMeta(i); ctx.font=isTot?'700 11px Roboto':'600 11px Roboto';
+      const meta=chart.getDatasetMeta(i); ctx.font=isTot?'700 14px Roboto':'600 11px Roboto';   // Totaal 1.3x groter
       meta.data.forEach(function(pt,idx){ const v=d.data[idx]; if(v==null||v===0||!pt) return;
-        ctx.fillStyle=isTot?'#FFFFFF':d.borderColor; ctx.fillText(fmtEurK(v), pt.x, pt.y-(isTot?10:8)); });
+        if(isTot){ ctx.fillStyle=(chart.data.labels[idx]===curStr)?'#22C55E':'#FFFFFF'; } else { ctx.fillStyle=d.borderColor; }   // huidig jaar groen
+        ctx.fillText(fmtEurK(v), pt.x, pt.y-(isTot?12:8)); });
     });
     ctx.restore();
   }};
