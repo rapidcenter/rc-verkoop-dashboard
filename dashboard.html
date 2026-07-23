@@ -731,6 +731,14 @@
   .pl-card .pl-sw{width:8px;height:8px;border-radius:2px;flex:0 0 auto}
   .pl-stage.empty-stage{opacity:.45}
   .pl-empty-note{font-size:11px;color:var(--ink-4);font-style:italic}
+  .pl-inv{margin-top:8px;padding-top:7px;border-top:1px dashed var(--border-2)}
+  .pl-inv-h{font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--ink-3);margin-bottom:5px}
+  .pl-inv-row{display:grid;grid-template-columns:1fr auto auto;gap:8px;align-items:baseline;padding:2px 0;font-size:11px}
+  .pl-inv-row .l{color:var(--ink-2);text-transform:capitalize}
+  .pl-inv-row .c{color:var(--ink-3);font-variant-numeric:tabular-nums;text-align:right}
+  .pl-inv-row .e{color:var(--white);font-weight:700;font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap}
+  .pl-inv-row.pl-inv-over .l{color:var(--orange);font-weight:700}
+  .pl-inv-row.pl-inv-over .e{color:var(--orange)}
   /* klikbaarheid */
   .pl-clickable{cursor:pointer}
   .pl-card.pl-clickable{transition:transform .12s ease,box-shadow .12s ease,border-color .12s ease}
@@ -3320,6 +3328,65 @@ function computeQuotePipeline(){
   const weighted=sectors.reduce(function(a,s){return a+s.weighted;},0);
   DATA.quote_pipeline={count:open.length, gross:gross, weighted:weighted, overall:overall, sectors:sectors};
 }
+// ===== Nog te factureren: open orders gebucket op shipping-deadline (MAX per order uit parts) =====
+// Deadline per order = MAX(shippingDeadline) over alle parts (AMFG ticket-model/list-with-count).
+// Nog te factureren = alle open orders (niet-cancelled, niet 'Order finished'), incl. New order.
+// Buckets: achterstallig (deadline verstreken) + deze maand + 2 maanden vooruit.
+let DEADLINES_LOADED=false;
+async function amfgFetchDeadlines(){
+  let tok=null; try{ tok=localStorage.getItem('accessToken'); }catch(e){}
+  if(!tok) return false;
+  const H={Authorization:tok, Accept:'application/json'};
+  const openSet=new Set();
+  (ALL_ROWS||[]).forEach(function(r){ const st=String(r['TICKET STATUS']||'').toLowerCase();
+    if(st.indexOf('cancel')>=0 || st.indexOf('order finished')>=0) return;
+    if((parseFloat(r['TOTAL NET PRICE'])||0)<=0) return;
+    const t=String(r['TICKET ID']||''); if(t) openSet.add(t); });
+  if(!openSet.size){ DATA._deadlineByTicket={}; computeInvoiceForecast(); return true; }
+  const from=new Date(); from.setMonth(from.getMonth()-15); const fromStr=from.toISOString().slice(0,10);
+  const dl={}; const found=new Set();
+  for(let off=0; off<40000; off+=1000){
+    let r; try{ r=await fetch('/management-service/api/v1/ticket-model/list-with-count?limit=1000&offset='+off+'&sort.by=orderCreatedAt&sort.direction=desc&from.orderCreatedAt='+fromStr+'&stateFilters=%7B%7D&search.filter=',{headers:H}); }catch(e){ break; }
+    if(!r.ok) break;
+    let d; try{ d=await r.json(); }catch(e){ break; }
+    const rows=Array.isArray(d)?d:(d.rows||[]);
+    rows.forEach(function(p){ const t=String(p.ticketId||''); if(!t) return;
+      const sd=p.shippingDeadline; if(sd){ const day=sd.slice(0,10); if(!dl[t]||day>dl[t]) dl[t]=day; }
+      if(openSet.has(t)) found.add(t); });
+    if(rows.length<1000) break;
+    if(found.size>=openSet.size) break;   // alle open orders gedekt
+  }
+  DATA._deadlineByTicket=dl; computeInvoiceForecast(); return true;
+}
+function computeInvoiceForecast(){
+  const dl=DATA._deadlineByTicket; if(!dl){ DATA.invoice_forecast=null; return; }
+  const rows=(typeof applyActiveRowFilters==='function') ? applyActiveRowFilters(ALL_ROWS||[]) : (ALL_ROWS||[]);
+  const now=new Date(), cy=now.getFullYear(), cm=now.getMonth();   // cm 0-based
+  const firstThis=new Date(cy,cm,1);
+  const b={overdue:{n:0,eur:0}, months:[{n:0,eur:0},{n:0,eur:0},{n:0,eur:0}], nodl:{n:0,eur:0}, total:{n:0,eur:0}};
+  rows.forEach(function(r){ const st=String(r['TICKET STATUS']||'').toLowerCase();
+    if(st.indexOf('cancel')>=0 || st.indexOf('order finished')>=0) return;
+    const net=parseFloat(r['TOTAL NET PRICE'])||0; if(net<=0) return;
+    b.total.n++; b.total.eur+=net;
+    const day=dl[String(r['TICKET ID']||'')];
+    const d=day?new Date(day):null;
+    if(!d||isNaN(d)){ b.nodl.n++; b.nodl.eur+=net; return; }
+    if(d<firstThis){ b.overdue.n++; b.overdue.eur+=net; return; }
+    const off=(d.getFullYear()-cy)*12+(d.getMonth()-cm);
+    if(off>=0&&off<=2){ b.months[off].n++; b.months[off].eur+=net; }
+  });
+  const MN=['jan','feb','mrt','apr','mei','jun','jul','aug','sep','okt','nov','dec'];
+  b.labels=[0,1,2].map(function(o){ return MN[(cm+o)%12]; });
+  DATA.invoice_forecast=b;
+}
+function invoiceForecastHTML(){
+  const f=DATA.invoice_forecast; if(!f) return '';
+  const eur=function(v){ return '€ '+Math.round(v||0).toLocaleString('nl-NL'); };
+  let h='<div class="pl-inv"><div class="pl-inv-h">Nog te factureren &middot; o.b.v. deadline</div>';
+  if(f.overdue.n) h+='<div class="pl-inv-row pl-inv-over"><span class="l">achterstallig</span><span class="c">'+f.overdue.n+'</span><span class="e">'+eur(f.overdue.eur)+'</span></div>';
+  f.months.forEach(function(m,i){ h+='<div class="pl-inv-row"><span class="l">'+f.labels[i]+'</span><span class="c">'+m.n+'</span><span class="e">'+eur(m.eur)+'</span></div>'; });
+  return h+'</div>';
+}
 function renderPipeline(){
   const strip = document.getElementById('pipelineStrip');
   if(!strip) return;
@@ -3393,6 +3460,7 @@ function renderPipeline(){
       });
       h += '</div>';
     }
+    if(st.key==='administratie') h += invoiceForecastHTML();
     h += '</div>';
   });
   h += '</div>';
@@ -3407,6 +3475,8 @@ function refreshDashboard(){
   showFilterEmpty(false);
   if(DATA._quotes) computeQuotePipeline();   // herbereken sector-weging (bv. nadat industrie-cache laadt)
   if(!QUOTES_LOADED){ QUOTES_LOADED=true; amfgFetchQuotes().then(function(ok){ if(ok) renderPipeline(); }); }
+  if(DATA._deadlineByTicket) computeInvoiceForecast();   // herbereken (reageert op filter)
+  if(!DEADLINES_LOADED){ DEADLINES_LOADED=true; amfgFetchDeadlines().then(function(ok){ if(ok) renderPipeline(); }); }
   refreshIndustriesQuiet();   // sector-cache stil op de achtergrond verversen als >24u oud
   renderBadges(); renderThisMonth(); renderKPIs(); renderClients(); renderCmpTable(); renderChurnKPIs(); renderOrders(); renderPyramid();
   initCharts(); renderLast6Chart();
