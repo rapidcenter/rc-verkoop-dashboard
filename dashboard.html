@@ -2516,7 +2516,7 @@ async function amfgFetchRange(fromYear, toYearExcl, onProgress){
     'TICKET ID':String(p.ticketId||''),'PROJECT ID':p.projectId||'','ORDER DATE':p.orderCreatedAt||'',
     'BILLING COMPANY':p.companyName||'','CUSTOMER COMPANY':p.companyName||'','TICKET STATUS':p.ticketStatusName||'',
     'CUSTOM PROJECT ID':p.customProjectId||'','CUSTOMER NAME':p.customerFullName||'','CUSTOMER ID':p.customerId||'',
-    'TOTAL NET PRICE':parseFloat(p.totalPrice||0)||0,'TOTAL GROSS PRICE':parseFloat(p.totalPriceInclVat||0)||0 }; }); }
+    'TOTAL NET PRICE':parseFloat(p.totalPrice||0)||0,'TOTAL GROSS PRICE':parseFloat(p.totalPriceInclVat||0)||0,'MIN DEADLINE':p.minShippingDeadline||'' }; }); }
   try{
     let all=[], pageIdx=0;
     for(let offset=0; offset<200000; offset+=200){
@@ -3359,7 +3359,6 @@ async function amfgFetchDeadlines(){
   DATA._deadlineByTicket=dl; computeInvoiceForecast(); return true;
 }
 function computeInvoiceForecast(){
-  const dl=DATA._deadlineByTicket; if(!dl){ DATA.invoice_forecast=null; return; }
   const rows=(typeof applyActiveRowFilters==='function') ? applyActiveRowFilters(ALL_ROWS||[]) : (ALL_ROWS||[]);
   const now=new Date(), cy=now.getFullYear(), cm=now.getMonth();   // cm 0-based
   const firstThis=new Date(cy,cm,1);
@@ -3368,7 +3367,7 @@ function computeInvoiceForecast(){
     if(st.indexOf('cancel')>=0 || st.indexOf('order finished')>=0) return;
     const net=parseFloat(r['TOTAL NET PRICE'])||0; if(net<=0) return;
     b.total.n++; b.total.eur+=net;
-    const day=dl[String(r['TICKET ID']||'')];
+    const day=String(r['MIN DEADLINE']||'').slice(0,10);
     const d=day?new Date(day):null;
     if(!d||isNaN(d)){ b.nodl.n++; b.nodl.eur+=net; return; }
     if(d<firstThis){ b.overdue.n++; b.overdue.eur+=net; return; }
@@ -3475,8 +3474,7 @@ function refreshDashboard(){
   showFilterEmpty(false);
   if(DATA._quotes) computeQuotePipeline();   // herbereken sector-weging (bv. nadat industrie-cache laadt)
   if(!QUOTES_LOADED){ QUOTES_LOADED=true; amfgFetchQuotes().then(function(ok){ if(ok) renderPipeline(); }); }
-  if(DATA._deadlineByTicket) computeInvoiceForecast();   // herbereken (reageert op filter)
-  if(!DEADLINES_LOADED){ DEADLINES_LOADED=true; amfgFetchDeadlines().then(function(ok){ if(ok) renderPipeline(); }); }
+  computeInvoiceForecast();   // nog te factureren o.b.v. minShippingDeadline uit de orders-feed
   refreshIndustriesQuiet();   // sector-cache stil op de achtergrond verversen als >24u oud
   renderBadges(); renderThisMonth(); renderKPIs(); renderClients(); renderCmpTable(); renderChurnKPIs(); renderOrders(); renderPyramid();
   initCharts(); renderLast6Chart();
@@ -4481,7 +4479,7 @@ async function amfgFetchSince(days){
     'TICKET ID':String(p.ticketId||''),'PROJECT ID':p.projectId||'','ORDER DATE':p.orderCreatedAt||'',
     'BILLING COMPANY':p.companyName||'','CUSTOMER COMPANY':p.companyName||'','TICKET STATUS':p.ticketStatusName||'',
     'CUSTOM PROJECT ID':p.customProjectId||'','CUSTOMER NAME':p.customerFullName||'','CUSTOMER ID':p.customerId||'',
-    'TOTAL NET PRICE':parseFloat(p.totalPrice||0)||0,'TOTAL GROSS PRICE':parseFloat(p.totalPriceInclVat||0)||0 }; }); }
+    'TOTAL NET PRICE':parseFloat(p.totalPrice||0)||0,'TOTAL GROSS PRICE':parseFloat(p.totalPriceInclVat||0)||0,'MIN DEADLINE':p.minShippingDeadline||'' }; }); }
   try{
     let all=[];
     for(let offset=0; offset<40000; offset+=200){
