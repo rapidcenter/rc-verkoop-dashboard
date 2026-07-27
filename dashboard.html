@@ -3365,7 +3365,9 @@ async function amfgFetchDeadlines(){
 function computeInvoiceForecast(){
   const rows=(typeof applyActiveRowFilters==='function') ? applyActiveRowFilters(ALL_ROWS||[]) : (ALL_ROWS||[]);
   const now=new Date(), cy=now.getFullYear(), cm=now.getMonth();   // cm 0-based
-  const firstThis=new Date(cy,cm,1);
+  // Achterstallig = deadline vóór VANDAAG (verstreken, nog niet gefactureerd). 'Deze maand' =
+  // vanaf vandaag t/m eind van de maand → zuiver "wat kan ik deze maand nog factureren".
+  const firstThis=new Date(cy,cm,now.getDate());
   const dl=DATA._deadlineByProject||{};
   const b={overdue:{n:0,eur:0}, months:[{n:0,eur:0},{n:0,eur:0},{n:0,eur:0}], nodl:{n:0,eur:0}, total:{n:0,eur:0}};
   rows.forEach(function(r){ const st=String(r['TICKET STATUS']||'').toLowerCase();
