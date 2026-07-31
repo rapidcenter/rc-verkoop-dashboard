@@ -2409,7 +2409,7 @@ function renderFilterBar(){
     '<button class="cfb-clear" onclick="clearAllFilters()" title="Alle filters wissen">&times; Toon alles</button>';
 }
 // === Globale filterbalk: A/B/C-accounts + industrie-sectoren, filtert het HELE dashboard ===
-const ALL_SECTORS=['Consumenten Goederen & Elektronica','Onderwijs','Industrieel','Medisch','Militair & Defensie & Ruimtevaart','Mobiliteit & Vervoer','Producent','Orthotic and prosthetic devices','Unmanned Aerial Vehicles (drones)','Particulier','Onbekend'];
+const ALL_SECTORS=['Consumenten Goederen & Elektronica','Onderwijs','Industrieel','Medisch','Militair & Defensie & Ruimtevaart','Mobiliteit & Vervoer','Producent','Orthotic and prosthetic devices','Unmanned Aerial Vehicles (drones)','Eyewear','Particulier','Onbekend'];
 // Sectoren die we standaard NIET als filterknop tonen (worden toch niet gebruikt).
 const HIDDEN_SECTORS=['Particulier','Onbekend'];
 function setGlobalAcc(letter){ ACCOUNT_FILTER = (letter==='all') ? null : letter; reapplyFilters(); renderGlobalFilterBar(); }
@@ -3508,6 +3508,7 @@ const IND_COLORS = {
   'Consumenten Goederen & Elektronica':'#7C3AED',
   'Producent':'#16A34A',
   'Onderwijs':'#EA580C',
+  'Eyewear':'#EC4899',
   'Onbekend':'#64748B'
 };
 const IND_FALLBACK = ['#0096D6','#59BBE4','#F59E0B','#A78BFA','#22C55E','#EF4444','#EAB308','#14B8A6'];
