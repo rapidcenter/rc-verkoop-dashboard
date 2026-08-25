@@ -72,7 +72,6 @@
   .yr-btn{padding:6px 14px;background:transparent;border:1px solid var(--border-2);color:var(--ink-2);font-family:'Roboto';font-size:12px;font-weight:500;letter-spacing:.05em;text-transform:uppercase;cursor:pointer;border-radius:999px;transition:all .15s}
   .yr-btn:hover{border-color:var(--rc-blue);background:rgba(0,150,214,.1);color:var(--white)}
   .yr-btn.active{background:var(--navy);border-color:var(--white);color:var(--white)}
-  .ind-modebar .yr-btn.active{background:var(--rc-blue);border-color:var(--rc-blue);color:#fff}
   .yr-btn.active[data-year="2024"]{background:var(--light-blue);border-color:var(--light-blue);color:#fff}
   .yr-btn.active[data-year="2025"]{background:var(--orange);border-color:var(--orange);color:#fff}
   .yr-btn.active[data-year="2026"]{background:var(--rc-blue);border-color:var(--rc-blue);color:#fff}
@@ -120,10 +119,6 @@
   .global-filter .gf-chip .gf-dot{width:9px;height:9px;border-radius:50%;display:inline-block}
   .global-filter .gf-chip.off .gf-dot{filter:grayscale(1)}
   .global-filter .gf-chip.active,.global-filter .gf-chip.sel{background:var(--rc-blue);border-color:var(--rc-blue)!important;color:#fff;font-weight:700}
-  .global-filter .gf-chip .gf-rev{margin-left:7px;font-weight:700;color:var(--light-blue);font-variant-numeric:tabular-nums}
-  .global-filter .gf-chip.sel .gf-rev{color:#fff}
-  .global-filter .gf-chip.off .gf-rev{color:var(--ink-4)}
-  .global-filter .gf-chip.gf-all .gf-rev{color:var(--ink-2)}
   .global-filter .gf-reset{margin-left:auto;background:var(--rc-blue);color:#fff;border:0;border-radius:999px;padding:4px 12px;font:700 11px 'Roboto';cursor:pointer}
   main{padding:20px 24px;max-width:none}
   .tab-section{display:none}
@@ -172,9 +167,6 @@
   .pyr-row{display:grid;grid-template-columns:220px 1fr auto 96px 88px 64px;align-items:center;gap:8px;width:100%;height:34px;transition:all .2s;cursor:default}
   .pyr-row:hover{filter:brightness(1.15)}
   .pyr-row .pyr-name{font-family:'Roboto';font-size:11px;color:var(--ink);white-space:nowrap;text-align:right;overflow:hidden;text-overflow:ellipsis;font-weight:500}
-  .pyr-row .pyr-sec-dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:5px;vertical-align:middle;flex:0 0 auto}
-  .pyr-row .pyr-link{color:var(--ink);text-decoration:none;cursor:pointer}
-  .pyr-row .pyr-link:hover{color:var(--light-blue);text-decoration:underline}
   .pyr-row .pyr-prevfull{font-family:'Roboto';font-size:11px;color:var(--ink-3);text-align:right;white-space:nowrap}
   .pyr-row .pyr-prevytd{font-family:'Roboto';font-size:11px;color:var(--ink-3);text-align:right;white-space:nowrap;opacity:.85}
   .pyr-row .pyr-growth{font-family:'Roboto';font-size:11px;font-weight:700;text-align:right;white-space:nowrap}
@@ -312,6 +304,13 @@
   .abc-tooltip u{text-decoration:underline;text-underline-offset:2px;color:var(--white)}
   .abc-tooltip .ttl{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--ink-3);font-weight:500;margin-bottom:4px;display:block}
   #chartLast6Wrap{position:relative}
+  /* Deze Maand: vul de beschikbare hoogte; chart links + orderlijst rechts schalen mee met het scherm (ook fullscreen), geen paginascroll */
+  #tab-deze-maand.active{display:flex;flex-direction:column;height:100%;min-height:0}
+  #tab-deze-maand .chart-grid{flex:1 1 auto;min-height:0}
+  #tab-deze-maand .chart-box{min-height:0}
+  #tab-deze-maand #chartLast6Wrap{min-height:0}
+  #tab-deze-maand .client-card{min-height:0;display:flex;flex-direction:column;overflow:hidden}
+  #tab-deze-maand #monthTopList{flex:1 1 auto;min-height:0;max-height:none}
   @media (max-width:900px){.chart-grid{grid-template-columns:1fr}}
   .abc-tabbar{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap}
   .abc-tab-btn{background:var(--surface);border:1px solid var(--border-2);color:var(--ink-2);padding:8px 18px;border-radius:999px;font-family:'Roboto';font-size:12px;font-weight:600;letter-spacing:.03em;cursor:pointer;transition:all .15s ease}
@@ -321,8 +320,6 @@
   .abc-mini.abc-A{background:#16A34A}
   .abc-mini.abc-B{background:#EA580C}
   .abc-mini.abc-C{background:#87898B}
-  .client-row .name.abc-clickable{cursor:pointer}
-  .client-row .name.abc-clickable:hover{color:var(--light-blue,#4FC3F7);text-decoration:underline;text-underline-offset:2px}
   .hist-tag{display:inline-block;margin-left:7px;padding:1px 6px;border-radius:4px;font-size:11px;font-weight:700;letter-spacing:.02em;vertical-align:middle;white-space:nowrap}
   .hist-tag.new{background:rgba(89,187,228,.20);color:#59BBE4}
   .hist-tag.up{background:rgba(34,197,94,.18);color:#4ADE80}
@@ -572,7 +569,7 @@
       <div class="client-card">
         <div class="client-card-header"><span class="y26" id="monthTopHeader">Laatste binnengekomen orders</span><span class="y26" id="monthTopTotal">&mdash;</span></div>
         <div class="orders-head dm"><span>Datum</span><span>Order</span><span>Klant</span><span>Status</span><span>Notitie</span><span style="text-align:right">Bedrag</span><span style="text-align:right">'26 omzet</span><span style="text-align:right">'25 YTD</span><span style="text-align:right">'25 omzet</span><span style="text-align:center">Acc.</span><span style="text-align:right">% YTD</span><span style="text-align:right">Omzet totaal</span></div>
-        <div id="monthTopList" style="max-height:calc(100vh - 740px);overflow-y:auto"></div>
+        <div id="monthTopList" style="overflow-y:auto"></div>
       </div>
     </div>
   </section>
@@ -629,13 +626,26 @@
         <div class="ind-modebar" style="display:flex;gap:8px">
           <button id="indModeYtd" class="yr-btn active" type="button" onclick="setIndMode('ytd')">YTD</button>
           <button id="indModeYear" class="yr-btn" type="button" onclick="setIndMode('year')">Per jaar</button>
-          <button id="indFcBtn" class="yr-btn active" type="button" onclick="setIndFc()" title="Prognosejaren (2 jaar o.b.v. historische groei) tonen/verbergen">&#128200; Prognose 2 jr</button>
+          <button id="indFcBtn" class="yr-btn active" type="button" onclick="setIndFc()" title="Prognose 2 jaar o.b.v. historische groei">&#128200; Prognose 2 jr</button>
+          <button id="indTotBtn" class="yr-btn active" type="button" onclick="setIndTot()" title="Totaallijn (opgeteld over alle getoonde sectoren) tonen/verbergen">&#931; Totaallijn</button>
         </div>
         <span style="font-size:11px;color:var(--ink-3)">Filter A/B/C &amp; sectoren via de balk bovenaan het dashboard</span>
       </div>
       <div class="chart-box" style="margin-bottom:16px">
-        <div class="chart-title"><span id="indT1">Omzet per sector</span><span class="sub">NET &euro; &middot; lijn per sector &middot; klik in legenda om te tonen/verbergen</span></div>
-        <div class="chart-canvas-wrap tall" style="min-height:min(520px, calc(100vh - 380px))"><canvas id="chartIndRevYear"></canvas></div>
+        <div class="chart-title"><span id="indT1">Omzet per industrie</span><span class="sub">NET &euro;</span></div>
+        <div class="chart-canvas-wrap tall"><canvas id="chartIndRevYear"></canvas></div>
+      </div>
+      <div class="chart-box" style="margin-bottom:16px">
+        <div class="chart-title"><span id="indT2">Marktaandeel per industrie</span><span class="sub">% van totale omzet &middot; 100% gestapeld</span></div>
+        <div class="chart-canvas-wrap tall"><canvas id="chartIndShare"></canvas></div>
+      </div>
+      <div class="chart-box" style="margin-bottom:16px">
+        <div class="chart-title"><span id="indT3">Aantal orders per industrie</span><span class="sub">Aantal orders</span></div>
+        <div class="chart-canvas-wrap tall"><canvas id="chartIndOrdYear"></canvas></div>
+      </div>
+      <div class="chart-box" style="margin-bottom:16px">
+        <div class="chart-title"><span id="indT4">Gemiddelde orderwaarde per industrie</span><span class="sub">NET &euro; per order</span></div>
+        <div class="chart-canvas-wrap tall"><canvas id="chartIndAov"></canvas></div>
       </div>
     </div>
   </section>
@@ -733,14 +743,6 @@
   .pl-card .pl-sw{width:8px;height:8px;border-radius:2px;flex:0 0 auto}
   .pl-stage.empty-stage{opacity:.45}
   .pl-empty-note{font-size:11px;color:var(--ink-4);font-style:italic}
-  .pl-inv{margin-top:8px;padding-top:7px;border-top:1px dashed var(--border-2)}
-  .pl-inv-h{font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--ink-3);margin-bottom:5px}
-  .pl-inv-row{display:grid;grid-template-columns:1fr auto auto;gap:8px;align-items:baseline;padding:2px 0;font-size:11px}
-  .pl-inv-row .l{color:var(--ink-2);text-transform:capitalize}
-  .pl-inv-row .c{color:var(--ink-3);font-variant-numeric:tabular-nums;text-align:right}
-  .pl-inv-row .e{color:var(--white);font-weight:700;font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap}
-  .pl-inv-row.pl-inv-over .l{color:var(--orange);font-weight:700}
-  .pl-inv-row.pl-inv-over .e{color:var(--orange)}
   /* klikbaarheid */
   .pl-clickable{cursor:pointer}
   .pl-card.pl-clickable{transition:transform .12s ease,box-shadow .12s ease,border-color .12s ease}
@@ -1473,7 +1475,7 @@ function renderClients(){
       const w = (c.revenue/maxRev*100).toFixed(0);
       const badge = '<span class="abc-mini abc-'+c.cls+'">'+c.cls+'</span>';
       const hist = historyTag(yr, c.name);
-      rows += '<div class="client-row"><span class="rank">#'+(i+1)+'</span><span class="name abc-clickable" title="Klik om op deze klant te filteren" onclick="applyClientFilter(\''+c.name.replace(/\x27/g, "\\\x27")+'\')">'+badge+c.name+hist+((yr===DATA.current_year)?aRiskTag(c.name):'')+'</span><span class="rev">'+fmtEurShort(c.revenue)+'</span><span class="orders">'+c.orders+'</span><div class="bar"><div style="width:'+w+'%;background:'+YEAR_COLORS[yr]+'"></div></div></div>';
+      rows += '<div class="client-row"><span class="rank">#'+(i+1)+'</span><span class="name" title="'+c.name+'">'+badge+c.name+hist+((yr===DATA.current_year)?aRiskTag(c.name):'')+'</span><span class="rev">'+fmtEurShort(c.revenue)+'</span><span class="orders">'+c.orders+'</span><div class="bar"><div style="width:'+w+'%;background:'+YEAR_COLORS[yr]+'"></div></div></div>';
     });
     if(!rows) rows = '<div class="empty" style="padding:16px;color:var(--ink-3)">Geen '+(flt==='all'?'':flt+'-')+'accounts in '+yr+'</div>';
     html += '<div class="client-card"><div class="client-card-header"><span class="'+yearClass+'">'+yr+' YTD &mdash; '+labelMap[flt]+'</span><span class="'+yearClass+'">'+list.length+' &middot; '+fmtEurK(totRev)+'</span></div><div class="client-list-head"><span>#</span><span>Klant</span><span style="text-align:right">Omzet</span><span style="text-align:right">Orders</span><span>Aandeel</span></div><div class="client-rows">'+rows+'</div></div>';
@@ -2411,7 +2413,7 @@ function renderFilterBar(){
     '<button class="cfb-clear" onclick="clearAllFilters()" title="Alle filters wissen">&times; Toon alles</button>';
 }
 // === Globale filterbalk: A/B/C-accounts + industrie-sectoren, filtert het HELE dashboard ===
-const ALL_SECTORS=['Consumenten Goederen & Elektronica','Onderwijs','Industrieel','Medisch','Militair & Defensie & Ruimtevaart','Mobiliteit & Vervoer','Producent','Orthotic and prosthetic devices','Unmanned Aerial Vehicles (drones)','Eyewear','Particulier','Onbekend'];
+const ALL_SECTORS=['Consumenten Goederen & Elektronica','Onderwijs','Industrieel','Medisch','Militair & Defensie & Ruimtevaart','Mobiliteit & Vervoer','Producent','Orthotic and prosthetic devices','Unmanned Aerial Vehicles (drones)','Particulier','Onbekend'];
 // Sectoren die we standaard NIET als filterknop tonen (worden toch niet gebruikt).
 const HIDDEN_SECTORS=['Particulier','Onbekend'];
 function setGlobalAcc(letter){ ACCOUNT_FILTER = (letter==='all') ? null : letter; reapplyFilters(); renderGlobalFilterBar(); }
@@ -2462,17 +2464,6 @@ function sectorsWithOrders(){
   ALL_ROWS.forEach(function(r){ set.add(industryOfRow(r)); });
   return set;
 }
-// Omzet per sector (lopend jaar, NET, excl. cancelled) — voor de labels op de sector-chips.
-function sectorRevenue(){
-  const m={}; const cy=(typeof DATA!=='undefined'&&DATA.current_year)||new Date().getFullYear();
-  (typeof ALL_ROWS!=='undefined'?(ALL_ROWS||[]):[]).forEach(function(r){
-    const st=String(r['TICKET STATUS']||'').toLowerCase(); if(st.indexOf('cancel')>=0) return;
-    const net=parseFloat(r['TOTAL NET PRICE'])||0; if(net<=0) return;
-    const d=new Date(r['ORDER DATE']); if(isNaN(d)||d.getFullYear()!==cy) return;
-    const s=industryOfRow(r); m[s]=(m[s]||0)+net;
-  });
-  return m;
-}
 function renderGlobalFilterBar(){
   const el=document.getElementById('globalFilter'); if(!el) return;
   if(!hasData()){ el.style.display='none'; return; }
@@ -2481,12 +2472,8 @@ function renderGlobalFilterBar(){
   let html='<span class="gf-lbl">Filter</span>'+
     '<span class="gf-acc-group">'+accBtn('all','Alle')+accBtn('A','A')+accBtn('B','B')+accBtn('C','C')+'</span>'+
     '<span class="gf-sep"></span><span class="gf-chips">';
-  // Omzet per sector (lopend jaar) als label achter de chips.
-  const rev = sectorRevenue();
-  const totRev = Object.keys(rev).reduce(function(a,k){ return a+rev[k]; }, 0);
-  const revTag = function(v){ return v>0 ? '<span class="gf-rev">'+fmtEurK(v)+'</span>' : ''; };
-  // "Alle sectoren"-chip (met totale omzet lopend jaar)
-  html+='<button type="button" class="gf-chip gf-all'+(!INDUSTRY_SEL.length?' active':'')+'" onclick="setGlobalSectorAll()">Alle sectoren'+revTag(totRev)+'</button>';
+  // "Alle sectoren"-chip
+  html+='<button type="button" class="gf-chip gf-all'+(!INDUSTRY_SEL.length?' active':'')+'" onclick="setGlobalSectorAll()">Alle sectoren</button>';
   // Alleen sectoren MET orders tonen (zodra de industrie-cache geladen is). Is de cache nog
   // niet geladen, dan tonen we alles zodat een klik de lazy-load kan starten.
   const present = sectorsWithOrders();
@@ -2496,7 +2483,7 @@ function renderGlobalFilterBar(){
     const c=indColor(n, ALL_SECTORS.indexOf(n));   // stabiele kleur o.b.v. originele index
     const sel = (INDUSTRY_SEL.indexOf(n)>=0);
     const off = (INDUSTRY_SEL.length && !sel);   // niet-geselecteerde sectoren dimmen zodra er ≥1 gekozen is
-    html+='<button type="button" class="gf-chip'+(off?' off':'')+(sel?' sel':'')+'" onclick="setGlobalSector(\''+n.replace(/\x27/g,"\\\x27")+'\')" style="border-color:'+(off?'var(--border-2)':c)+'"><span class="gf-dot" style="background:'+c+'"></span>'+n+revTag(rev[n]||0)+'</button>';
+    html+='<button type="button" class="gf-chip'+(off?' off':'')+(sel?' sel':'')+'" onclick="setGlobalSector(\''+n.replace(/\x27/g,"\\\x27")+'\')" style="border-color:'+(off?'var(--border-2)':c)+'"><span class="gf-dot" style="background:'+c+'"></span>'+n+'</button>';
   });
   html+='</span><span id="gfIndLoading" style="display:none;color:var(--light-blue);font-size:11px;margin-left:6px">sectoren laden&hellip;</span>';
   if(ACCOUNT_FILTER || INDUSTRY_SEL.length || CLIENT_FILTER) html+='<button type="button" class="gf-reset" onclick="clearGlobalFilters()">&times; reset</button>';
@@ -2518,7 +2505,7 @@ async function amfgFetchRange(fromYear, toYearExcl, onProgress){
     'TICKET ID':String(p.ticketId||''),'PROJECT ID':p.projectId||'','ORDER DATE':p.orderCreatedAt||'',
     'BILLING COMPANY':p.companyName||'','CUSTOMER COMPANY':p.companyName||'','TICKET STATUS':p.ticketStatusName||'',
     'CUSTOM PROJECT ID':p.customProjectId||'','CUSTOMER NAME':p.customerFullName||'','CUSTOMER ID':p.customerId||'',
-    'TOTAL NET PRICE':parseFloat(p.totalPrice||0)||0,'TOTAL GROSS PRICE':parseFloat(p.totalPriceInclVat||0)||0,'MIN DEADLINE':p.minShippingDeadline||'' }; }); }
+    'TOTAL NET PRICE':parseFloat(p.totalPrice||0)||0,'TOTAL GROSS PRICE':parseFloat(p.totalPriceInclVat||0)||0 }; }); }
   try{
     let all=[], pageIdx=0;
     for(let offset=0; offset<200000; offset+=200){
@@ -3330,71 +3317,6 @@ function computeQuotePipeline(){
   const weighted=sectors.reduce(function(a,s){return a+s.weighted;},0);
   DATA.quote_pipeline={count:open.length, gross:gross, weighted:weighted, overall:overall, sectors:sectors};
 }
-// ===== Nog te factureren: open orders gebucket op shipping-deadline (MAX per order) =====
-// CANONIEKE REGEL: RC Source data lib\definities en regels\facturatie_forecast_definitie.md (leidend).
-// Deadline per order = MAX(shippingDeadline) over alle parts, opgehaald via het LICHTE
-// endpoint 'ticket-model/project' en gegroepeerd per projectId (ORDER-nr) — IDENTIEK aan het
-// productiedashboard (zelfde bron/definitie), zodat de cijfers overeenkomen.
-// Nog te factureren = alle open orders (niet-cancelled, niet 'Order finished'), incl. New order.
-// Buckets: achterstallig (deadline verstreken) + deze maand + 2 maanden vooruit.
-let DEADLINES_LOADED=false;
-async function amfgFetchDeadlines(){
-  let tok=null; try{ tok=localStorage.getItem('accessToken'); }catch(e){}
-  if(!tok) return false;
-  const H={Authorization:tok, Accept:'application/json'};
-  const openSet=new Set();
-  (ALL_ROWS||[]).forEach(function(r){ const st=String(r['TICKET STATUS']||'').toLowerCase();
-    if(st.indexOf('cancel')>=0 || st.indexOf('order finished')>=0) return;
-    if((parseFloat(r['TOTAL NET PRICE'])||0)<=0) return;
-    const p=String(r['PROJECT ID']||''); if(p) openSet.add(p); });
-  if(!openSet.size){ DATA._deadlineByProject={}; computeInvoiceForecast(); return true; }
-  const fromISO=new Date(Date.now()-12*30*86400000).toISOString();   // ~12 mnd terug
-  const dl={}; const found=new Set();
-  for(let off=0, pg=0; pg<60; off+=200, pg++){
-    const q='limit=200&offset='+off+'&sort.direction=desc&sort.by=orderCreatedAt&timezone=2&stateFilters=%7B%7D&search.filter=&from.orderCreatedAt='+encodeURIComponent('"'+fromISO+'"');
-    let r; try{ r=await fetch('/management-service/api/v1/ticket-model/project?'+q,{headers:H}); }catch(e){ break; }
-    if(!r.ok) break;
-    let d; try{ d=await r.json(); }catch(e){ break; }
-    const rows=Array.isArray(d)?d:(d.rows||[]);
-    rows.forEach(function(p){ const pid=String(p.projectId||''); if(!pid) return;
-      const sd=p.shippingDeadline; if(sd){ const day=sd.slice(0,10); if(!dl[pid]||day>dl[pid]) dl[pid]=day; }   // MAX per order
-      if(openSet.has(pid)) found.add(pid); });
-    if(rows.length<200) break;
-    if(found.size>=openSet.size) break;   // alle open orders gedekt
-  }
-  DATA._deadlineByProject=dl; computeInvoiceForecast(); return true;
-}
-function computeInvoiceForecast(){
-  const rows=(typeof applyActiveRowFilters==='function') ? applyActiveRowFilters(ALL_ROWS||[]) : (ALL_ROWS||[]);
-  const now=new Date(), cy=now.getFullYear(), cm=now.getMonth();   // cm 0-based
-  // Achterstallig = deadline vóór VANDAAG (verstreken, nog niet gefactureerd). 'Deze maand' =
-  // vanaf vandaag t/m eind van de maand → zuiver "wat kan ik deze maand nog factureren".
-  const firstThis=new Date(cy,cm,now.getDate());
-  const dl=DATA._deadlineByProject||{};
-  const b={overdue:{n:0,eur:0}, months:[{n:0,eur:0},{n:0,eur:0},{n:0,eur:0}], nodl:{n:0,eur:0}, total:{n:0,eur:0}};
-  rows.forEach(function(r){ const st=String(r['TICKET STATUS']||'').toLowerCase();
-    if(st.indexOf('cancel')>=0 || st.indexOf('order finished')>=0) return;
-    const net=parseFloat(r['TOTAL NET PRICE'])||0; if(net<=0) return;
-    b.total.n++; b.total.eur+=net;
-    const day=dl[String(r['PROJECT ID']||'')]||'';
-    const d=day?new Date(day):null;
-    if(!d||isNaN(d)){ b.nodl.n++; b.nodl.eur+=net; return; }
-    if(d<firstThis){ b.overdue.n++; b.overdue.eur+=net; return; }
-    const off=(d.getFullYear()-cy)*12+(d.getMonth()-cm);
-    if(off>=0&&off<=2){ b.months[off].n++; b.months[off].eur+=net; }
-  });
-  const MN=['jan','feb','mrt','apr','mei','jun','jul','aug','sep','okt','nov','dec'];
-  b.labels=[0,1,2].map(function(o){ return MN[(cm+o)%12]; });
-  DATA.invoice_forecast=b;
-}
-function invoiceForecastHTML(){
-  const f=DATA.invoice_forecast; if(!f) return '';
-  const eur=function(v){ return '€ '+Math.round(v||0).toLocaleString('nl-NL'); };
-  let h='<div class="pl-inv"><div class="pl-inv-h">Nog te factureren &middot; o.b.v. deadline</div>';
-  if(f.overdue.n) h+='<div class="pl-inv-row pl-inv-over"><span class="l">achterstallig</span><span class="c">'+f.overdue.n+'</span><span class="e">'+eur(f.overdue.eur)+'</span></div>';
-  f.months.forEach(function(m,i){ h+='<div class="pl-inv-row"><span class="l">'+f.labels[i]+'</span><span class="c">'+m.n+'</span><span class="e">'+eur(m.eur)+'</span></div>'; });
-  return h+'</div>';
-}
 function renderPipeline(){
   const strip = document.getElementById('pipelineStrip');
   if(!strip) return;
@@ -3468,7 +3390,6 @@ function renderPipeline(){
       });
       h += '</div>';
     }
-    if(st.key==='administratie') h += invoiceForecastHTML();
     h += '</div>';
   });
   h += '</div>';
@@ -3483,9 +3404,6 @@ function refreshDashboard(){
   showFilterEmpty(false);
   if(DATA._quotes) computeQuotePipeline();   // herbereken sector-weging (bv. nadat industrie-cache laadt)
   if(!QUOTES_LOADED){ QUOTES_LOADED=true; amfgFetchQuotes().then(function(ok){ if(ok) renderPipeline(); }); }
-  computeInvoiceForecast();   // nog te factureren o.b.v. MAX(shippingDeadline) per order
-  if(!DEADLINES_LOADED){ DEADLINES_LOADED=true; amfgFetchDeadlines().then(function(ok){ if(ok) renderPipeline(); }); }
-  refreshIndustriesQuiet();   // sector-cache stil op de achtergrond verversen als >24u oud
   renderBadges(); renderThisMonth(); renderKPIs(); renderClients(); renderCmpTable(); renderChurnKPIs(); renderOrders(); renderPyramid();
   initCharts(); renderLast6Chart();
   renderPipeline();
@@ -3504,13 +3422,12 @@ let INDUSTRY_LOADED = false;
 
 const IND_COLORS = {
   'Medisch':'#DC2626',
-  'Militair & Defensie & Ruimtevaart':'#14B8A6',
+  'Militair & Defensie & Ruimtevaart':'#002B49',
   'Mobiliteit & Vervoer':'#3A8DDE',
   'Industrieel':'#87898B',
   'Consumenten Goederen & Elektronica':'#7C3AED',
   'Producent':'#16A34A',
   'Onderwijs':'#EA580C',
-  'Eyewear':'#EC4899',
   'Onbekend':'#64748B'
 };
 const IND_FALLBACK = ['#0096D6','#59BBE4','#F59E0B','#A78BFA','#22C55E','#EF4444','#EAB308','#14B8A6'];
@@ -3522,8 +3439,7 @@ function loadIndustryCache(){
   try{ const raw=localStorage.getItem(RC_IND_CACHE_KEY); if(raw) m=JSON.parse(raw)||{}; }catch(e){}
   INDUSTRY_MAP=m; return m;
 }
-function saveIndustryCache(){ try{ localStorage.setItem(RC_IND_CACHE_KEY, JSON.stringify(INDUSTRY_MAP||{})); localStorage.setItem(RC_IND_CACHE_KEY+'_ts', String(Date.now())); }catch(e){} }
-function industryCacheAgeMs(){ try{ const t=parseInt(localStorage.getItem(RC_IND_CACHE_KEY+'_ts')||'0',10); return t ? (Date.now()-t) : Infinity; }catch(e){ return Infinity; } }
+function saveIndustryCache(){ try{ localStorage.setItem(RC_IND_CACHE_KEY, JSON.stringify(INDUSTRY_MAP||{})); }catch(e){} }
 
 function uniqueCustomerIds(){
   const s=new Set();
@@ -3533,13 +3449,12 @@ function uniqueCustomerIds(){
 
 // Haal industrie op voor alle klanten die nog niet gecached zijn (SEQUENTIEEL — parallel
 // triggert een AMFG-uitlog).
-async function amfgFetchIndustries(onProgress, force){
+async function amfgFetchIndustries(onProgress){
   let token=null; try{ token=localStorage.getItem('accessToken'); }catch(e){}
   if(!token) return false;
   const H={Authorization:token, Accept:'application/json'};
   const map=loadIndustryCache();
-  // force = alle order-klanten opnieuw ophalen (voor auto-verversen); anders alleen ontbrekende.
-  const ids=uniqueCustomerIds().filter(function(id){ return force || !(id in map); });
+  const ids=uniqueCustomerIds().filter(function(id){ return !(id in map); });
   const total=ids.length;
   for(let i=0;i<total;i++){
     const id=ids[i];
@@ -3637,25 +3552,6 @@ async function refreshIndustries(){
   INDUSTRY_MAP={}; saveIndustryCache(); INDUSTRY_LOADED=false;
   await ensureIndustryLoaded();
 }
-// Automatisch (stil, op de achtergrond) verversen als de industrie-cache ouder is dan 24u.
-// Haalt de sector van de huidige order-klanten opnieuw op, zodat wijzigingen in AMFG
-// (bv. UMCG: Onderwijs -> Medisch) vanzelf overkomen. 1x per sessie.
-let INDUSTRY_AUTO_DONE=false;
-const INDUSTRY_TTL_MS=24*60*60*1000;
-async function refreshIndustriesQuiet(){
-  if(INDUSTRY_AUTO_DONE || INDUSTRY_LOADING) return;
-  let token=null; try{ token=localStorage.getItem('accessToken'); }catch(e){}
-  if(!token) return;
-  loadIndustryCache();
-  if(industryCacheAgeMs() <= INDUSTRY_TTL_MS){ INDUSTRY_AUTO_DONE=true; return; }  // nog vers
-  if(!uniqueCustomerIds().length) return;   // nog geen orders geladen
-  INDUSTRY_AUTO_DONE=true; INDUSTRY_LOADING=true;
-  try{ await amfgFetchIndustries(null, true); }catch(e){}   // force: alle order-klanten opnieuw
-  INDUSTRY_LOADING=false;
-  try{ renderGlobalFilterBar(); }catch(e){}
-  const it=document.getElementById('tab-industrie'); if(it && it.classList.contains('active')){ try{ renderIndustry(); }catch(e){} }
-  if(typeof renderPyramid==='function'){ try{ renderPyramid(); }catch(e){} }
-}
 
 function setIndMode(m){
   window.__indMode = m;
@@ -3733,7 +3629,7 @@ function renderIndustry(){
   const lastRealIdx = years.length-1;
   // fractie van huidig jaar verstreken (voor voljaar-projectie in 'per jaar'-modus)
   const frac=(DATA.ytd_day_of_year||365)/365;
-  let projF = (mode==='year' && frac>0.02 && frac<1) ? (1/frac) : 1;
+  const projF = (mode==='year' && frac>0.02 && frac<1) ? (1/frac) : 1;
   // alle industrieën gesorteerd op totale omzet (gekozen modus); Onbekend achteraan
   const totRev=function(n){ return years.reduce(function(s,y){return s+((agg[n][revKey][y])||0);},0); };
   const allNames=Object.keys(agg).sort(function(a,b){
@@ -3742,13 +3638,6 @@ function renderIndustry(){
     return totRev(b)-totRev(a);
   });
   const names=allNames;   // sector-filtering gebeurt globaal (op dataniveau)
-  // Lijn de huidige-jaar-projectie uit met de 'Deze maand'-prognose (DATA.year_forecast.revenue):
-  // vervang de run-rate door de factor die het YTD-totaal op de jaarprognose brengt, zodat de
-  // Industrie-totaallijn hetzelfde 2026-prognosebedrag toont als de hero op 'Deze maand'.
-  if(mode==='year' && showFc && DATA.year_forecast && DATA.year_forecast.revenue>0){
-    const _act=names.reduce(function(s,n){ return s+((agg[n][revKey][cur])||0); }, 0);
-    if(_act>0) projF = DATA.year_forecast.revenue/_act;
-  }
   const colorOf=function(n){ return indColor(n, allNames.indexOf(n)); };
   // gemiddelde jaargroei (geometrisch, geklemd 0,5-2,0)
   function growthOf(arr){ const r=[]; for(let i=1;i<arr.length;i++){ if(arr[i-1]>0 && arr[i]>0) r.push(arr[i]/arr[i-1]); } if(!r.length) return 1; let p=1; r.forEach(function(x){p*=x;}); return Math.max(0.5, Math.min(2, Math.pow(p, 1/r.length))); }
@@ -3770,66 +3659,83 @@ function renderIndustry(){
   const ord=function(n,y){ return Math.round((agg[n][ordKey][y])||0); };
   const aov=function(n,y){ const r=(agg[n][revKey][y])||0, o=(agg[n][ordKey][y])||0; return o? Math.round(r/o):0; };
   const share=function(n,y){ const t=totY[y]; return t? +(((agg[n][revKey][y])||0)/t*100).toFixed(1):0; };
-  // ===== Eén lijngrafiek: omzet per sector over de jaren =====
-  // Reageert op de globale filterbalk (sector + A/B/C) omdat de onderliggende data al gefilterd
-  // is. Elke sector = één lijn; klik in de legenda om lijnen te tonen/verbergen.
-  // Prognosejaren (indien aan) gestippeld voortgezet.
-  // In 'per jaar' + prognose: toon het huidige (nog lopende) jaar als voljaar-prognose (run-rate),
-  // en stippel de lijn al vanaf het laatste volledige jaar (bv. 2025 -> 2026 -> 2027 -> 2028).
-  const projCur = (mode==='year' && showFc && projF>1);
-  const dashFrom = projCur ? (lastRealIdx-1) : lastRealIdx;
-  const lineDs = names.map(function(n){ const c=colorOf(n);
-    const data = years.map(function(y){ return (projCur && y===cur) ? Math.round(rev(n,y)*projF) : rev(n,y); }).concat(showFc ? fcRev[n] : []);
-    return {label:n, data:data, borderColor:c, backgroundColor:c, tension:.3, borderWidth:2.5,
-      pointRadius:3, pointHoverRadius:7, pointBackgroundColor:c, fill:false, spanGaps:true,
-      segment:{ borderDash:function(ctx){ return ctx.p0DataIndex>=dashFrom ? [6,5] : undefined; } } };
-  });
-  // Dikke TOTAAL-lijn: som van de ZICHTBARE sectoren (herberekend bij legenda-toggle).
-  const totData = labels.map(function(_,idx){ let s=null; lineDs.forEach(function(d){ const v=d.data[idx]; if(v!=null) s=(s||0)+v; }); return s; });
-  lineDs.push({label:'Totaal', _isTotal:true, data:totData, borderColor:'#FFFFFF', backgroundColor:'#FFFFFF', borderWidth:4, pointRadius:3.5, pointHoverRadius:8, tension:.3, fill:false, spanGaps:true, order:99,
-    segment:{ borderDash:function(ctx){ return ctx.p0DataIndex>=dashFrom ? [7,5] : undefined; } } });
-  function recomputeTotal(chart){
-    const ds=chart.data.datasets; const tot=ds.find(function(d){return d._isTotal;}); if(!tot) return;
-    const L=chart.data.labels.length; const arr=new Array(L).fill(null);
-    ds.forEach(function(d,i){ if(d._isTotal || !chart.isDatasetVisible(i)) return;
-      d.data.forEach(function(v,idx){ if(v==null) return; arr[idx]=(arr[idx]||0)+v; }); });
-    tot.data=arr;
+  // dataset-builder: reële jaren + (optioneel) 2 prognosejaren, prognose gestippeld
+  function ds(realFn, fcFn, fill){
+    return names.map(function(n){ const c=colorOf(n);
+      const data=years.map(function(y){ return realFn(n,y); }).concat(showFc? fcFn(n):[]);
+      return {label:n, data:data, borderColor:c, backgroundColor:c, tension:.3, borderWidth:2.5,
+        pointRadius:3.5, pointHoverRadius:7, pointBackgroundColor:c, fill:!!fill,
+        segment:{ borderDash:function(ctx){ return ctx.p0DataIndex>=lastRealIdx ? [6,5] : undefined; } } }; });
   }
-  // waarde-labels in K's: altijd op de Totaal-lijn; op sectoren alleen als er ≤4 zichtbaar zijn.
-  const indKLabels={ id:'indklbl', afterDatasetsDraw:function(chart){
-    const ds=chart.data.datasets; let visSec=0;
-    ds.forEach(function(d,i){ if(!d._isTotal && chart.isDatasetVisible(i)) visSec++; });
-    const ctx=chart.ctx; ctx.save(); ctx.textAlign='center'; const curStr=String(cur);
-    ds.forEach(function(d,i){ if(!chart.isDatasetVisible(i)) return; const isTot=!!d._isTotal;
-      if(!isTot && visSec>4) return;
-      const meta=chart.getDatasetMeta(i); ctx.font=isTot?'700 14px Roboto':'600 11px Roboto';   // Totaal 1.3x groter
-      meta.data.forEach(function(pt,idx){ const v=d.data[idx]; if(v==null||v===0||!pt) return;
-        if(isTot){ ctx.fillStyle=(chart.data.labels[idx]===curStr)?'#22C55E':'#FFFFFF'; } else { ctx.fillStyle=d.borderColor; }   // huidig jaar groen
-        ctx.fillText(fmtEurK(v), pt.x, pt.y-(isTot?12:8)); });
-    });
-    ctx.restore();
-  }};
-  const suf = (mode==='ytd' ? '— YTD (t/m zelfde dag)' : '— per volledig jaar') + (showFc ? ' · incl. prognose 2 jr' : '');
-  const st=function(id,t){ const e=document.getElementById(id); if(e) e.textContent=t; };
-  st('indT1','Omzet per sector '+suf);
-  if(charts.indRevYear) charts.indRevYear.destroy();
-  charts.indRevYear=new Chart(document.getElementById('chartIndRevYear'),{ type:'line',
-    data:{labels:labels, datasets:lineDs},
-    options:Object.assign({}, CD, {
-      layout:{padding:{top:22,bottom:8,left:12,right:12}},
+  function opts(fmtAxis, fmtTip, stacked, ymax){
+    return Object.assign({}, CD, {
+      layout:{padding:{top:16,bottom:8,left:12,right:12}},
       plugins:Object.assign({}, CD.plugins, {
-        legend:{display:true, position:'top', labels:{color:'#CFD2D3', font:{size:11,family:'Roboto'}, boxWidth:12, padding:8, usePointStyle:true},
-          onClick:function(e,item,legend){ const ci=legend.chart; Chart.defaults.plugins.legend.onClick.call(this,e,item,legend); recomputeTotal(ci); ci.update(); }},
+        legend:{display:false},
         tooltip:Object.assign({}, CD.plugins.tooltip, {callbacks:{
-          title:function(items){ const l=items[0].label; return ((+l>cur)||(projCur&&+l===cur)) ? (l+' (prognose)') : l; },
-          label:function(c){ return c.dataset.label+': '+fmtEur(c.parsed.y||0); }
+          title:function(items){ const l=items[0].label; return (+l>cur) ? (l+' (prognose)') : l; },
+          label:function(c){ return c.dataset.label+': '+fmtTip(c.parsed.y||0); }
         }})
       }),
       scales:{
-        x:Object.assign({}, CD.scales.x, {ticks:Object.assign({}, CD.scales.x.ticks, {font:{size:12,weight:'600'}})}),
-        y:Object.assign({}, CD.scales.y, {beginAtZero:true, ticks:Object.assign({}, CD.scales.y.ticks, {callback:function(v){return fmtEurShort(v);}})})
+        x:Object.assign({}, CD.scales.x, {ticks:Object.assign({}, CD.scales.x.ticks, {font:{size:13,weight:'600'}})}),
+        y:Object.assign({}, CD.scales.y, {beginAtZero:true, stacked:!!stacked, max:(ymax||undefined), ticks:Object.assign({}, CD.scales.y.ticks, {callback:fmtAxis})})
       }
-    }), plugins:[indKLabels] });
+    });
+  }
+  const suf = (mode==='ytd' ? '— YTD (t/m zelfde dag)' : '— per volledig jaar') + (showFc ? ' · incl. prognose 2 jr' : '');
+  const st=function(id,t){ const e=document.getElementById(id); if(e) e.textContent=t; };
+  st('indT1','Omzet per industrie '+suf);
+  st('indT2','Marktaandeel per industrie '+suf);
+  st('indT3','Aantal orders per industrie '+suf);
+  st('indT4','Gemiddelde orderwaarde per industrie '+suf);
+  // Jaartotalen (reageren op zichtbare industrieën) — tussen haakjes op de x-as
+  const totOrdY={}; years.forEach(function(y){ totOrdY[y]=names.reduce(function(s,n){return s+((agg[n][ordKey][y])||0);},0); });
+  const totOrdFc=[0,0]; names.forEach(function(n){ totOrdFc[0]+=fcOrd[n][0]; totOrdFc[1]+=fcOrd[n][1]; });
+  // Dikke, goed zichtbare TOTAAL-lijn (opgeteld over de getoonde sectoren) — aan/uit via knop.
+  const showTot = window.__indTot !== false;
+  function totalDs(realTotY, fcArr){
+    const data = years.map(function(y){ return Math.round(realTotY[y]||0); }).concat(showFc ? fcArr.map(function(v){ return Math.round(v||0); }) : []);
+    return {label:'Totaal', data:data, borderColor:'#FFFFFF', backgroundColor:'#FFFFFF', tension:.3, borderWidth:4, pointRadius:4.5, pointHoverRadius:8, pointBackgroundColor:'#FFFFFF', fill:false, order:100,
+      segment:{ borderDash:function(ctx){ return ctx.p0DataIndex>=lastRealIdx ? [7,5] : undefined; } } };
+  }
+  function mkLabels(realTot, fcTot){
+    const arr=years.map(function(y){ return String(y)+' ('+realTot(y)+')'; });
+    if(showFc){ fcYears.forEach(function(y,k){ arr.push(String(y)+' ('+fcTot(k)+')'); }); }
+    return arr;
+  }
+  const labRev=mkLabels(function(y){return fmtEurK(totY[y]||0);}, function(k){return fmtEurK(totFc[k]||0);});
+  const labOrd=mkLabels(function(y){return fmtNum(totOrdY[y]||0);}, function(k){return fmtNum(totOrdFc[k]||0);});
+  const labShare=labRev;   // marktaandeel: absolute totaalomzet als context
+  const labAov=mkLabels(function(y){return totOrdY[y]? fmtEurShort(Math.round(totY[y]/totOrdY[y])):'-';}, function(k){return totOrdFc[k]? fmtEurShort(Math.round(totFc[k]/totOrdFc[k])):'-';});
+  // 1) Omzet
+  if(charts.indRevYear) charts.indRevYear.destroy();
+  const revDs=ds(rev, function(n){return fcRev[n];}); if(showTot) revDs.push(totalDs(totY, totFc));
+  charts.indRevYear=new Chart(document.getElementById('chartIndRevYear'),{ type:'line',
+    data:{labels:labRev, datasets:revDs},
+    options:opts(function(v){return fmtEurShort(v);}, function(v){return fmtEur(v);}),
+    plugins:[indPointLabels(function(v){return fmtEurShort(v);})] });
+  // 2) Marktaandeel (100% gestapelde vlakken)
+  if(charts.indShare) charts.indShare.destroy();
+  const shareFc=function(n){ return [ totFc[0]? +(fcRev[n][0]/totFc[0]*100).toFixed(1):0, totFc[1]? +(fcRev[n][1]/totFc[1]*100).toFixed(1):0 ]; };
+  charts.indShare=new Chart(document.getElementById('chartIndShare'),{ type:'line',
+    data:{labels:labShare, datasets:ds(share, shareFc, true)},
+    options:opts(function(v){return v+'%';}, function(v){return v.toFixed(1)+'%';}, true, 100),
+    plugins:[indPointLabels(function(v){return Math.round(v)+'%';})] });
+  // 3) Aantal orders
+  if(charts.indOrdYear) charts.indOrdYear.destroy();
+  const ordDs=ds(ord, function(n){return fcOrd[n];}); if(showTot) ordDs.push(totalDs(totOrdY, totOrdFc));
+  charts.indOrdYear=new Chart(document.getElementById('chartIndOrdYear'),{ type:'line',
+    data:{labels:labOrd, datasets:ordDs},
+    options:opts(function(v){return fmtNum(v);}, function(v){return fmtNum(v)+' orders';}),
+    plugins:[indPointLabels(function(v){return fmtNum(v);})] });
+  // 4) Gemiddelde orderwaarde
+  if(charts.indAov) charts.indAov.destroy();
+  const aovFc=function(n){ return [ fcOrd[n][0]? Math.round(fcRev[n][0]/fcOrd[n][0]):0, fcOrd[n][1]? Math.round(fcRev[n][1]/fcOrd[n][1]):0 ]; };
+  charts.indAov=new Chart(document.getElementById('chartIndAov'),{ type:'line',
+    data:{labels:labAov, datasets:ds(aov, aovFc)},
+    options:opts(function(v){return fmtEurShort(v);}, function(v){return fmtEur(v);}),
+    plugins:[indPointLabels(function(v){return fmtEurShort(v);})] });
   setTimeout(function(){ Object.values(charts).forEach(function(c){ c&&c.resize&&c.resize(); }); },30);
 }
 
@@ -4089,21 +3995,6 @@ function pctYTD(clientYtd){
 function renderPyramid(){
   const cont = document.getElementById('pyramidContainer');
   if(!cont) return;
-  const esc = function(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); };
-  // Klant -> customerId (klantkaart-link) + sector (gekleurde stip). Namen = canoniek (genormaliseerd).
-  const custByName={}, secByName={};
-  (typeof ALL_ROWS!=='undefined'?(ALL_ROWS||[]):[]).forEach(function(r){
-    const nm=String(r['CUSTOMER COMPANY']||r['BILLING COMPANY']||'').trim(); if(!nm) return;
-    if(!custByName[nm] && r['CUSTOMER ID']!=null && r['CUSTOMER ID']!=='') custByName[nm]=String(r['CUSTOMER ID']);
-    if(!secByName[nm]){ const s=(typeof industryOfRow==='function')?industryOfRow(r):''; if(s && s!=='Onbekend') secByName[nm]=s; }
-  });
-  function nameCell(nm){
-    const sec=secByName[nm], cust=custByName[nm];
-    const dot=sec ? '<span class="pyr-sec-dot" style="background:'+indColor(sec, ALL_SECTORS.indexOf(sec))+'" title="'+esc(sec)+'"></span>' : '';
-    const label=esc(nm);
-    const inner=cust ? '<a class="pyr-link" href="https://console.amfg.ai/customer/'+encodeURIComponent(cust)+'" target="_blank" rel="noopener" title="Open klantkaart in AMFG'+(sec?' &middot; '+esc(sec):'')+'">'+label+'</a>' : label;
-    return dot+inner;
-  }
   const ytdMonth = DATA.ytd_month;
   const yr = String(DATA.current_year);
   const active = DATA.active_clients || {};
@@ -4176,7 +4067,7 @@ function renderPyramid(){
     if(prevFull) titleStr += ' · \'25 full: '+fmtEur(prevFull);
     if(hasPrev2) titleStr += ' · \'24 YTD: '+fmtEur(prev2Value);
     return '<div class="pyr-row '+rowClass+' '+sizeClass+'" title="'+titleStr+'">'+
-      '<span class="pyr-name">'+nameCell(name)+'</span>'+
+      '<span class="pyr-name">'+name+'</span>'+
       '<div class="pyr-bars">'+
         '<div class="pyr-bar" style="width:'+wStr+'"></div>'+
         prevBarHTML+
@@ -4498,7 +4389,7 @@ async function amfgFetchSince(days){
     'TICKET ID':String(p.ticketId||''),'PROJECT ID':p.projectId||'','ORDER DATE':p.orderCreatedAt||'',
     'BILLING COMPANY':p.companyName||'','CUSTOMER COMPANY':p.companyName||'','TICKET STATUS':p.ticketStatusName||'',
     'CUSTOM PROJECT ID':p.customProjectId||'','CUSTOMER NAME':p.customerFullName||'','CUSTOMER ID':p.customerId||'',
-    'TOTAL NET PRICE':parseFloat(p.totalPrice||0)||0,'TOTAL GROSS PRICE':parseFloat(p.totalPriceInclVat||0)||0,'MIN DEADLINE':p.minShippingDeadline||'' }; }); }
+    'TOTAL NET PRICE':parseFloat(p.totalPrice||0)||0,'TOTAL GROSS PRICE':parseFloat(p.totalPriceInclVat||0)||0 }; }); }
   try{
     let all=[];
     for(let offset=0; offset<40000; offset+=200){
