@@ -119,6 +119,8 @@
   .global-filter .gf-chip .gf-dot{width:9px;height:9px;border-radius:50%;display:inline-block}
   .global-filter .gf-chip.off .gf-dot{filter:grayscale(1)}
   .global-filter .gf-chip.active,.global-filter .gf-chip.sel{background:var(--rc-blue);border-color:var(--rc-blue)!important;color:#fff;font-weight:700}
+  .global-filter .gf-chip .gf-rev{margin-left:5px;font-weight:700;opacity:.7}
+  .global-filter .gf-chip.sel .gf-rev{opacity:.9}
   .global-filter .gf-reset{margin-left:auto;background:var(--rc-blue);color:#fff;border:0;border-radius:999px;padding:4px 12px;font:700 11px 'Roboto';cursor:pointer}
   main{padding:20px 24px;max-width:none}
   .tab-section{display:none}
@@ -320,6 +322,8 @@
   .abc-mini.abc-A{background:#16A34A}
   .abc-mini.abc-B{background:#EA580C}
   .abc-mini.abc-C{background:#87898B}
+  .client-row .name.abc-clickable{cursor:pointer}
+  .client-row .name.abc-clickable:hover{color:var(--light-blue,#4FC3F7);text-decoration:underline;text-underline-offset:2px}
   .hist-tag{display:inline-block;margin-left:7px;padding:1px 6px;border-radius:4px;font-size:11px;font-weight:700;letter-spacing:.02em;vertical-align:middle;white-space:nowrap}
   .hist-tag.new{background:rgba(89,187,228,.20);color:#59BBE4}
   .hist-tag.up{background:rgba(34,197,94,.18);color:#4ADE80}
@@ -1475,7 +1479,7 @@ function renderClients(){
       const w = (c.revenue/maxRev*100).toFixed(0);
       const badge = '<span class="abc-mini abc-'+c.cls+'">'+c.cls+'</span>';
       const hist = historyTag(yr, c.name);
-      rows += '<div class="client-row"><span class="rank">#'+(i+1)+'</span><span class="name" title="'+c.name+'">'+badge+c.name+hist+((yr===DATA.current_year)?aRiskTag(c.name):'')+'</span><span class="rev">'+fmtEurShort(c.revenue)+'</span><span class="orders">'+c.orders+'</span><div class="bar"><div style="width:'+w+'%;background:'+YEAR_COLORS[yr]+'"></div></div></div>';
+      rows += '<div class="client-row"><span class="rank">#'+(i+1)+'</span><span class="name abc-clickable" title="Klik om op deze klant te filteren" onclick="applyClientFilter(\''+c.name.replace(/\x27/g, "\\\x27")+'\')">'+badge+c.name+hist+((yr===DATA.current_year)?aRiskTag(c.name):'')+'</span><span class="rev">'+fmtEurShort(c.revenue)+'</span><span class="orders">'+c.orders+'</span><div class="bar"><div style="width:'+w+'%;background:'+YEAR_COLORS[yr]+'"></div></div></div>';
     });
     if(!rows) rows = '<div class="empty" style="padding:16px;color:var(--ink-3)">Geen '+(flt==='all'?'':flt+'-')+'accounts in '+yr+'</div>';
     html += '<div class="client-card"><div class="client-card-header"><span class="'+yearClass+'">'+yr+' YTD &mdash; '+labelMap[flt]+'</span><span class="'+yearClass+'">'+list.length+' &middot; '+fmtEurK(totRev)+'</span></div><div class="client-list-head"><span>#</span><span>Klant</span><span style="text-align:right">Omzet</span><span style="text-align:right">Orders</span><span>Aandeel</span></div><div class="client-rows">'+rows+'</div></div>';
@@ -2413,7 +2417,7 @@ function renderFilterBar(){
     '<button class="cfb-clear" onclick="clearAllFilters()" title="Alle filters wissen">&times; Toon alles</button>';
 }
 // === Globale filterbalk: A/B/C-accounts + industrie-sectoren, filtert het HELE dashboard ===
-const ALL_SECTORS=['Consumenten Goederen & Elektronica','Onderwijs','Industrieel','Medisch','Militair & Defensie & Ruimtevaart','Mobiliteit & Vervoer','Producent','Orthotic and prosthetic devices','Unmanned Aerial Vehicles (drones)','Particulier','Onbekend'];
+const ALL_SECTORS=['Consumenten Goederen & Elektronica','Onderwijs','Industrieel','Medisch','Militair & Defensie & Ruimtevaart','Mobiliteit & Vervoer','Producent','Orthotic and prosthetic devices','Unmanned Aerial Vehicles (drones)','Eyewear','Particulier','Onbekend'];
 // Sectoren die we standaard NIET als filterknop tonen (worden toch niet gebruikt).
 const HIDDEN_SECTORS=['Particulier','Onbekend'];
 function setGlobalAcc(letter){ ACCOUNT_FILTER = (letter==='all') ? null : letter; reapplyFilters(); renderGlobalFilterBar(); }
@@ -2464,6 +2468,18 @@ function sectorsWithOrders(){
   ALL_ROWS.forEach(function(r){ set.add(industryOfRow(r)); });
   return set;
 }
+// Omzet (NET, lopend jaar, excl. cancelled) per sector — voor de labels op de filterchips.
+function sectorRevenueMap(){
+  const m={};
+  const yr=(DATA && DATA.current_year) ? DATA.current_year : new Date().getFullYear();
+  (DATA && DATA.all_orders ? DATA.all_orders : []).forEach(function(o){
+    if(o.y!==yr) return;
+    const raw=(o.cust!=null && INDUSTRY_MAP && INDUSTRY_MAP[String(o.cust)]) ? INDUSTRY_MAP[String(o.cust)] : '';
+    const n=normalizeIndustry(raw);
+    m[n]=(m[n]||0)+o.rev;
+  });
+  return m;
+}
 function renderGlobalFilterBar(){
   const el=document.getElementById('globalFilter'); if(!el) return;
   if(!hasData()){ el.style.display='none'; return; }
@@ -2477,13 +2493,16 @@ function renderGlobalFilterBar(){
   // Alleen sectoren MET orders tonen (zodra de industrie-cache geladen is). Is de cache nog
   // niet geladen, dan tonen we alles zodat een klik de lazy-load kan starten.
   const present = sectorsWithOrders();
+  const secRev = sectorRevenueMap();   // omzet (NET, lopend jaar) per sector voor het label
   const shownSectors = (present ? ALL_SECTORS.filter(function(n){ return present.has(n) || INDUSTRY_SEL.indexOf(n)>=0; }) : ALL_SECTORS)
     .filter(function(n){ return HIDDEN_SECTORS.indexOf(n)<0; });   // Particulier/Onbekend altijd verbergen
   shownSectors.forEach(function(n){
     const c=indColor(n, ALL_SECTORS.indexOf(n));   // stabiele kleur o.b.v. originele index
     const sel = (INDUSTRY_SEL.indexOf(n)>=0);
     const off = (INDUSTRY_SEL.length && !sel);   // niet-geselecteerde sectoren dimmen zodra er ≥1 gekozen is
-    html+='<button type="button" class="gf-chip'+(off?' off':'')+(sel?' sel':'')+'" onclick="setGlobalSector(\''+n.replace(/\x27/g,"\\\x27")+'\')" style="border-color:'+(off?'var(--border-2)':c)+'"><span class="gf-dot" style="background:'+c+'"></span>'+n+'</button>';
+    const rev = secRev[n] || 0;
+    const revTag = rev>0 ? '<span class="gf-rev">'+fmtEurK(rev)+'</span>' : '';
+    html+='<button type="button" class="gf-chip'+(off?' off':'')+(sel?' sel':'')+'" onclick="setGlobalSector(\''+n.replace(/\x27/g,"\\\x27")+'\')" style="border-color:'+(off?'var(--border-2)':c)+'"><span class="gf-dot" style="background:'+c+'"></span>'+n+revTag+'</button>';
   });
   html+='</span><span id="gfIndLoading" style="display:none;color:var(--light-blue);font-size:11px;margin-left:6px">sectoren laden&hellip;</span>';
   if(ACCOUNT_FILTER || INDUSTRY_SEL.length || CLIENT_FILTER) html+='<button type="button" class="gf-reset" onclick="clearGlobalFilters()">&times; reset</button>';
@@ -3428,6 +3447,7 @@ const IND_COLORS = {
   'Consumenten Goederen & Elektronica':'#7C3AED',
   'Producent':'#16A34A',
   'Onderwijs':'#EA580C',
+  'Eyewear':'#EC4899',
   'Onbekend':'#64748B'
 };
 const IND_FALLBACK = ['#0096D6','#59BBE4','#F59E0B','#A78BFA','#22C55E','#EF4444','#EAB308','#14B8A6'];
