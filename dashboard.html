@@ -398,11 +398,19 @@
   .recent-row .amount{font-family:'Roboto';font-weight:700;text-align:right;color:var(--text)}
   .orders-head,.orders-row{display:grid;grid-template-columns:90px 100px 1fr 140px 1fr 100px 100px 100px 100px 70px 60px 100px;gap:6px;align-items:center;padding:8px 12px;font-size:12px;caret-color:transparent}
   .orders-head>span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .orders-head.dm,.orders-row.dm{grid-template-columns:72px 92px 1.1fr 120px 1fr 64px 74px 66px 66px 36px 42px 72px;gap:3px;padding:6px 6px;font-size:10.5px}
+  .orders-head.dm,.orders-row.dm{grid-template-columns:72px 92px 1fr 116px 112px 0.9fr 64px 74px 66px 66px 36px 42px 72px;gap:3px;padding:6px 6px;font-size:10.5px}
   .orders-row.dm .ticket{font-size:11px;white-space:nowrap;overflow:visible}
   .orders-row.dm .notes{font-size:13px}
   .orders-row.dm .status{white-space:nowrap}
-  .orders-row.dm .client,.orders-row.dm .status,.orders-row.dm .notes{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .orders-row.dm .client,.orders-row.dm .status{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  /* Sectorkolom (stip + volledige naam, ellipsis + volledige naam bij hover) */
+  .orders-row.dm .sector{display:flex;align-items:center;gap:5px;min-width:0;font-size:10.5px;color:var(--ink)}
+  .orders-row.dm .sector .sec-dot{width:8px;height:8px;border-radius:50%;flex:0 0 auto}
+  .orders-row.dm .sector .sec-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .orders-row.dm .sector .sec-empty{color:var(--ink-4)}
+  .orders-head.dm .sec-h{overflow:hidden;text-overflow:ellipsis}
+  /* Notitie mag afbreken (wrap) zodat de inhoud niet wordt afgekapt */
+  .orders-row.dm .notes{white-space:normal;overflow:visible;text-overflow:clip;line-height:1.25;word-break:break-word}
   .orders-head{background:var(--surface2);font-family:'Roboto';font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--white);font-weight:700;border-bottom:2px solid var(--rc-blue)}
   .orders-row{border-bottom:1px solid var(--border);color:var(--ink)}
   .orders-row:hover{background:rgba(0,150,214,.06)}
@@ -574,7 +582,7 @@
       </div>
       <div class="client-card">
         <div class="client-card-header"><span class="y26" id="monthTopHeader">Laatste binnengekomen orders</span><span class="y26" id="monthTopTotal">&mdash;</span></div>
-        <div class="orders-head dm"><span>Datum</span><span>Order</span><span>Klant</span><span>Status</span><span>Notitie</span><span style="text-align:right">Bedrag</span><span style="text-align:right">'26 omzet</span><span style="text-align:right">'25 YTD</span><span style="text-align:right">'25 omzet</span><span style="text-align:center">Acc.</span><span style="text-align:right">% YTD</span><span style="text-align:right">Omzet totaal</span></div>
+        <div class="orders-head dm"><span>Datum</span><span>Order</span><span>Klant</span><span>Status</span><span class="sec-h">Sector</span><span>Notitie</span><span style="text-align:right">Bedrag</span><span style="text-align:right">'26 omzet</span><span style="text-align:right">'25 YTD</span><span style="text-align:right">'25 omzet</span><span style="text-align:center">Acc.</span><span style="text-align:right">% YTD</span><span style="text-align:right">Omzet totaal</span></div>
         <div id="monthTopList" style="overflow-y:auto"></div>
       </div>
     </div>
@@ -1085,6 +1093,7 @@ function renderThisMonth(){
         '<span class="ticket">'+(o.project||o.ticket||'')+'</span>'+
         '<span class="client-cell"><span class="client" style="'+clientPillStyle(o.client)+'" title="Klik om op deze klant te filteren" onclick="applyClientFilter(\''+o.client.replace(/\x27/g, "\\\x27")+'\')">'+o.client+'</span>'+aCandidateBadge(o.client, o.client_ytd)+'</span>'+
         '<span class="status" style="'+statusStyle(o.status)+'" title="'+o.status+'">'+(o.status||'')+'</span>'+
+        sectorCell(o)+
         '<span class="notes'+(/\bQC\b/i.test(o.notes||'') ? ' qc' : '')+'" title="'+(o.notes||'')+'">'+(o.notes||'')+'</span>'+
         '<span class="amount amount-click" title="Klik voor omzethistorie" onclick="toggleClientExpand(this.parentElement, \''+o.client.replace(/\x27/g, "\\\x27")+'\')">'+fmtEur(o.gross||o.revenue||0)+'</span>'+
         '<span class="ytd">'+fmtEur(o.client_ytd||0)+ytdDelta(o.client_ytd||0, o.client_prev_ytd||0)+'</span>'+
@@ -2482,6 +2491,16 @@ function sectorRevenueMap(){
   });
   return m;
 }
+// Sector-cel voor de orderlijst: gekleurde stip + volledige sectornaam (ellipsis + volledige naam bij hover).
+function sectorCell(o){
+  const raw=(o && o.cust!=null && INDUSTRY_MAP && INDUSTRY_MAP[String(o.cust)]) ? INDUSTRY_MAP[String(o.cust)] : '';
+  const sec=normalizeIndustry(raw);
+  const show=(sec && sec!=='Onbekend') ? sec : '';
+  if(!show) return '<span class="sector"><span class="sec-empty">&mdash;</span></span>';
+  const col=indColor(sec, ALL_SECTORS.indexOf(sec));
+  const safe=String(show).replace(/"/g,'&quot;');
+  return '<span class="sector" title="'+safe+'"><span class="sec-dot" style="background:'+col+'"></span><span class="sec-name">'+show+'</span></span>';
+}
 function renderGlobalFilterBar(){
   const el=document.getElementById('globalFilter'); if(!el) return;
   if(!hasData()){ el.style.display='none'; return; }
@@ -2874,6 +2893,7 @@ function processExcelData(rows, fileName){
       _ts: isNaN(dt) ? 0 : dt.getTime(),
       project: String(r['PROJECT ID']||''),
       client: key,
+      cust: (r['CUSTOMER ID']!=null ? String(r['CUSTOMER ID']) : ''),
       status: String(r['TICKET STATUS']||'').trim(),
       notes: String(r['CUSTOM PROJECT ID']||'').trim(),
       gross: Math.round(parseFloat(r['TOTAL NET PRICE'])||0),
@@ -2901,6 +2921,7 @@ function processExcelData(rows, fileName){
       _ts: isNaN(dt) ? 0 : dt.getTime(),
       project: String(r['PROJECT ID']||''),
       client: key,
+      cust: (r['CUSTOMER ID']!=null ? String(r['CUSTOMER ID']) : ''),
       status: String(r['TICKET STATUS']||'').trim(),
       notes: String(r['CUSTOM PROJECT ID']||'').trim(),
       gross: Math.round(parseFloat(r['TOTAL NET PRICE'])||0),
