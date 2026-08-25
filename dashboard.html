@@ -308,6 +308,8 @@
   #chartLast6Wrap{position:relative}
   /* Deze Maand: vul de beschikbare hoogte; chart links + orderlijst rechts schalen mee met het scherm (ook fullscreen), geen paginascroll */
   #tab-deze-maand.active{display:flex;flex-direction:column;height:100%;min-height:0}
+  #tab-deze-maand .year-hero{flex:0 0 auto}   /* bovenbalk (prognose e.d.) nooit laten krimpen */
+  #tab-deze-maand .kpi-grid{flex:0 0 auto}    /* KPI-rij op natuurlijke hoogte */
   #tab-deze-maand .chart-grid{flex:1 1 auto;min-height:0}
   #tab-deze-maand .chart-box{min-height:0}
   #tab-deze-maand #chartLast6Wrap{min-height:0}
