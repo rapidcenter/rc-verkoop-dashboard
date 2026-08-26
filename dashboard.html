@@ -2524,7 +2524,8 @@ function renderGlobalFilterBar(){
   const present = sectorsWithOrders();
   const secRev = sectorRevenueMap();   // omzet (NET, lopend jaar) per sector voor het label
   const shownSectors = (present ? ALL_SECTORS.filter(function(n){ return present.has(n) || INDUSTRY_SEL.indexOf(n)>=0; }) : ALL_SECTORS)
-    .filter(function(n){ return HIDDEN_SECTORS.indexOf(n)<0; });   // Particulier/Onbekend altijd verbergen
+    .filter(function(n){ return HIDDEN_SECTORS.indexOf(n)<0; })   // Particulier/Onbekend altijd verbergen
+    .sort(function(a,b){ return (secRev[b]||0)-(secRev[a]||0); });   // hoogste omzet eerst
   shownSectors.forEach(function(n){
     const c=indColor(n, ALL_SECTORS.indexOf(n));   // stabiele kleur o.b.v. originele index
     const sel = (INDUSTRY_SEL.indexOf(n)>=0);
