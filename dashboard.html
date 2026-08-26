@@ -593,6 +593,11 @@
   </section>
 
   <section class="tab-section" id="tab-overzicht">
+    <div class="ov-fc-bar" style="display:flex;gap:8px;align-items:center;justify-content:flex-end;margin-bottom:10px">
+      <span style="font-size:11px;color:var(--ink-3);text-transform:uppercase;letter-spacing:.06em">Prognose (o.b.v. historische groei)</span>
+      <button id="ovFc1" class="yr-btn" type="button" onclick="setOvFc(1)" title="Prognose +1 jaar op alle grafieken">+ 1 jr</button>
+      <button id="ovFc2" class="yr-btn" type="button" onclick="setOvFc(2)" title="Prognose +2 jaar op alle grafieken">+ 2 jr</button>
+    </div>
     <div class="kpi-grid" id="kpiGrid"></div>
     <div class="ov-grid">
     <div class="chart-box" style="margin-bottom:16px">
@@ -1759,6 +1764,45 @@ const METRIC_DEFS = {
   }
 };
 
+// ===== Overzicht-tab: 2-jaars prognose (toggle per jaar) =====
+// OV_FC: 0 = uit · 1 = +1 jaar · 2 = +2 jaar. Groei = geometrisch gemiddelde (geklemd 0,5–2,0).
+// Startpunt lopend jaar = year_forecast (omzet/orders) of seizoensgeschaalde YTD→voljaar.
+let OV_FC = 0;
+function setOvFc(n){
+  if(n===1) OV_FC = (OV_FC>=1)?0:1;
+  else if(n===2) OV_FC = (OV_FC>=2)?1:2;
+  updateOvFcButtons();
+  if(typeof renderYearYtdChart==='function') renderYearYtdChart();
+}
+function updateOvFcButtons(){
+  const cur=(DATA&&DATA.current_year)||new Date().getFullYear();
+  const b1=document.getElementById('ovFc1'), b2=document.getElementById('ovFc2');
+  if(b1){ b1.textContent='+ '+(cur+1); b1.classList.toggle('active', OV_FC>=1); }
+  if(b2){ b2.textContent='+ '+(cur+2); b2.classList.toggle('active', OV_FC>=2); }
+}
+function ovGrowth(arr){ const r=[]; for(let i=1;i<arr.length;i++){ if(arr[i-1]>0&&arr[i]>0) r.push(arr[i]/arr[i-1]); } if(!r.length) return 1; let p=1; r.forEach(function(x){p*=x;}); return Math.max(0.5, Math.min(2, Math.pow(p,1/r.length))); }
+function ovFullCurrentEst(metricName, def, cur){
+  if(metricName==='revenue' && DATA.year_forecast && DATA.year_forecast.revenue>0) return DATA.year_forecast.revenue;
+  if(metricName==='orders'  && DATA.year_forecast && DATA.year_forecast.orders>0)  return DATA.year_forecast.orders;
+  const ytdC=def.getYtd(cur), ytdP=def.getYtd(cur-1), fullP=def.getTotal(cur-1);
+  if(ytdC>0 && ytdP>0 && fullP>0) return ytdC*(fullP/ytdP);   // seizoensgeschaald
+  return def.getTotal(cur);
+}
+function ovForecastBase(metricName, def, cur){
+  const base=ovFullCurrentEst(metricName, def, cur);
+  const g=ovGrowth([def.getTotal(cur-2), def.getTotal(cur-1), base]);
+  return [Math.round(base*g), Math.round(base*g*g)];
+}
+function ovForecast(metricName, def, cur){
+  if(OV_FC<1) return [];
+  let vals;
+  if(metricName==='avg'){
+    const r=ovForecastBase('revenue', METRIC_DEFS.revenue, cur);
+    const o=ovForecastBase('orders', METRIC_DEFS.orders, cur);
+    vals=[0,1].map(function(k){ return o[k]? Math.round(r[k]/o[k]) : null; });
+  } else { vals=ovForecastBase(metricName, def, cur); }
+  return vals.slice(0,OV_FC);
+}
 function renderYearMetricChart(metricName){
   const def = METRIC_DEFS[metricName];
   if(!def) return;
@@ -1810,13 +1854,21 @@ function renderYearMetricChart(metricName){
     }
   };
 
+  // 2-jaars prognose: labels + jaartotaal uitbreiden; YTD blijft leeg voor prognosejaren (gestippeld).
+  const cur = DATA.current_year;
+  const fc = (typeof OV_FC!=='undefined' && OV_FC>0) ? ovForecast(metricName, def, cur) : [];
+  const lastRealIdx = years.length-1;
+  const labelsX = labels.concat(fc.map(function(v,k){ return String(cur+1+k); }));
+  const totalsX = totals.concat(fc);
+  const ytdsX   = ytds.concat(fc.map(function(){ return null; }));
+
   charts[def.chartKey] = new Chart(canvas, {
     type: 'line',
     data: {
-      labels: labels,
+      labels: labelsX,
       datasets: [
-        { label: def.totalLabel, data: totals, borderColor: def.colorTotal, backgroundColor: def.colorTotalFill, tension:.35, fill:'+1', pointRadius:6, pointHoverRadius:8, pointBackgroundColor: def.colorTotal, borderWidth:2.5 },
-        { label: def.ytdLabel,   data: ytds,   borderColor: def.colorYtd,   backgroundColor: def.colorYtdFill,   tension:.35, fill:'origin', pointRadius:6, pointHoverRadius:8, pointBackgroundColor: def.colorYtd,   borderWidth:2.5 }
+        { label: def.totalLabel, data: totalsX, borderColor: def.colorTotal, backgroundColor: def.colorTotalFill, tension:.35, fill:'+1', pointRadius:6, pointHoverRadius:8, pointBackgroundColor: def.colorTotal, borderWidth:2.5, segment:{ borderDash:function(ctx){ return ctx.p0DataIndex>=lastRealIdx ? [6,4] : undefined; } } },
+        { label: def.ytdLabel,   data: ytdsX,   borderColor: def.colorYtd,   backgroundColor: def.colorYtdFill,   tension:.35, fill:'origin', pointRadius:6, pointHoverRadius:8, pointBackgroundColor: def.colorYtd,   borderWidth:2.5 }
       ]
     },
     options: Object.assign({}, CD, {
@@ -1966,9 +2018,39 @@ function renderClientsAbcChart(){
     }
   };
 
+  // 2-jaars prognose (per A/B/C-klasse, groei-gebaseerd): extra 'Jaar'-bars, geen YTD-bar.
+  let labelsC = labels;
+  if(typeof OV_FC!=='undefined' && OV_FC>0){
+    const cur=DATA.current_year;
+    const iCur=years.indexOf(cur), iP=years.indexOf(cur-1), iPP=years.indexOf(cur-2);
+    if(iCur>=0){
+      const realLen=years.length;
+      const clsFc=function(cls){
+        const ytdC=(fullCounts[iCur]&&fullCounts[iCur][cls])||0;   // huidig jaar: full = ytd
+        const fullP=(iP>=0&&fullCounts[iP])?fullCounts[iP][cls]:0;
+        const ytdP=(iP>=0&&ytdCounts[iP])?ytdCounts[iP][cls]:0;
+        const base=(ytdP>0&&fullP>0)? ytdC*(fullP/ytdP) : ytdC;   // seizoensgeschaald voljaar
+        const fullPP=(iPP>=0&&fullCounts[iPP])?fullCounts[iPP][cls]:0;
+        const g=ovGrowth([fullPP, fullP, base]);
+        return [Math.round(base*g), Math.round(base*g*g)].slice(0,OV_FC);
+      };
+      const fcMap={'A — Jaar':clsFc('A'),'B — Jaar':clsFc('B'),'C — Jaar':clsFc('C')};
+      const dim={A:A_C+'55', B:B_C+'55', C:C_C+'55'};
+      const fcYears=[]; for(let k=0;k<OV_FC;k++) fcYears.push(String(cur+1+k));
+      labelsC = labels.concat(fcYears);
+      datasets.forEach(function(ds){
+        if(ds._group==='full'){
+          const cls=ds.label.charAt(0), solid=ds.backgroundColor;
+          ds.data=ds.data.concat(fcMap[ds.label]||[]);
+          ds.backgroundColor=Array(realLen).fill(solid).concat(Array(OV_FC).fill(dim[cls]));
+        } else { ds.data=ds.data.concat(Array(OV_FC).fill(null)); }   // geen YTD-bar voor prognosejaren
+      });
+    }
+  }
+
   charts.yearYtdClients = new Chart(canvas, {
     type: 'bar',
-    data: { labels, datasets },
+    data: { labels: labelsC, datasets },
     options: Object.assign({}, CD, {
       layout: { padding: { top: 36, bottom: 8, left: 12, right: 12 } },
       plugins: Object.assign({}, CD.plugins, {
@@ -2042,6 +2124,7 @@ function renderYearYtdChart(){
   renderYearMetricChart('orders');
   renderClientsAbcChart();             // gespecialiseerde A/B/C versie
   renderYearMetricChart('avg');
+  if(typeof updateOvFcButtons==='function') updateOvFcButtons();
 }
 
 // setRevMode is verouderd — Overzicht-tab gebruikt nu alleen jaar-vs-YTD charts.
