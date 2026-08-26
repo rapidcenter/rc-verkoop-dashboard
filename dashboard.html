@@ -2568,13 +2568,18 @@ function sectorsWithOrders(){
 }
 // Omzet (NET, lopend jaar, excl. cancelled) per sector — voor de labels op de filterchips.
 function sectorRevenueMap(){
+  // Bewust op de VOLLEDIGE, ongefilterde dataset (ALL_ROWS) — niet op DATA.all_orders, want die
+  // wordt bij een actief sectorfilter herrekend op één sector, waardoor de rest €0 zou worden en
+  // de chip-volgorde/omzet zou wegvallen. Zo blijven omzet en sortering stabiel bij selectie.
   const m={};
   const yr=(DATA && DATA.current_year) ? DATA.current_year : new Date().getFullYear();
-  (DATA && DATA.all_orders ? DATA.all_orders : []).forEach(function(o){
-    if(o.y!==yr) return;
-    const raw=(o.cust!=null && INDUSTRY_MAP && INDUSTRY_MAP[String(o.cust)]) ? INDUSTRY_MAP[String(o.cust)] : '';
-    const n=normalizeIndustry(raw);
-    m[n]=(m[n]||0)+o.rev;
+  const rows=(typeof ALL_ROWS!=='undefined' && ALL_ROWS) ? ALL_ROWS : [];
+  rows.forEach(function(r){
+    const st=String(r['TICKET STATUS']||'').toLowerCase(); if(st.indexOf('cancel')>=0) return;
+    const net=parseFloat(r['TOTAL NET PRICE'])||0; if(net<=0) return;
+    const d=new Date(r['ORDER DATE']); if(isNaN(d) || d.getFullYear()!==yr) return;
+    const n=industryOfRow(r);
+    m[n]=(m[n]||0)+net;
   });
   return m;
 }
