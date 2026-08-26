@@ -543,7 +543,6 @@
   <button class="tab-btn active" onclick="switchTab('deze-maand',this)">Deze Maand</button>
   <button class="tab-btn" onclick="switchTab('overzicht',this)">Overzicht YTD</button>
   <button class="tab-btn" onclick="switchTab('klanten',this)">ABC Accounts</button>
-  <button class="tab-btn" onclick="switchTab('industrie',this)">Industrie</button>
   <button class="tab-btn" onclick="switchTab('maanden',this)">Maandvergelijking</button>
   <button class="tab-btn" onclick="switchTab('piramide',this)">Piramide</button>
   <button class="tab-btn" onclick="switchTab('klantverloop',this)">Klantverloop</button>
@@ -593,8 +592,9 @@
   </section>
 
   <section class="tab-section" id="tab-overzicht">
-    <div class="ov-fc-bar" style="display:flex;gap:8px;align-items:center;justify-content:flex-end;margin-bottom:10px">
+    <div class="ov-fc-bar" style="display:flex;gap:8px;align-items:center;justify-content:flex-start;margin-bottom:10px">
       <span style="font-size:11px;color:var(--ink-3);text-transform:uppercase;letter-spacing:.06em">Prognose (o.b.v. historische groei)</span>
+      <button id="ovFc0" class="yr-btn" type="button" onclick="setOvCur()" title="Voljaar-prognose van het lopende jaar">dit jaar</button>
       <button id="ovFc1" class="yr-btn" type="button" onclick="setOvFc(1)" title="Prognose +1 jaar op alle grafieken">+ 1 jr</button>
       <button id="ovFc2" class="yr-btn" type="button" onclick="setOvFc(2)" title="Prognose +2 jaar op alle grafieken">+ 2 jr</button>
     </div>
@@ -632,49 +632,6 @@
     </div>
     <div class="client-grid" id="clientGrid"></div>
   </section>
-
-  <section class="tab-section" id="tab-industrie">
-    <div class="pyr-header">
-      <div>
-        <div class="pyr-title">Omzet &amp; orders per industrie</div>
-        <div class="pyr-subtitle">Trend over de jaren &middot; NET-omzet &middot; gekoppeld via de AMFG-klantkaart (huidig jaar = YTD)</div>
-      </div>
-      <button class="yr-btn" type="button" id="indRefreshBtn" onclick="refreshIndustries()" title="Industrie-data opnieuw ophalen uit AMFG">&#8635; industrie verversen</button>
-    </div>
-    <div id="indProgress" class="ind-progress" style="display:none">
-      <div class="ind-progress-txt" id="indProgTxt">Industrie-data ophalen&hellip;</div>
-      <div class="ind-progress-bar"><i id="indProgBar" style="width:4%"></i></div>
-      <div class="ind-progress-note">Eenmalig per klant &mdash; daarna gecached en vrijwel instant.</div>
-    </div>
-    <div id="indBody" style="display:none">
-      <div class="ind-toolbar" style="display:flex;flex-wrap:wrap;align-items:center;gap:16px;margin-bottom:16px">
-        <div class="ind-modebar" style="display:flex;gap:8px">
-          <button id="indModeYtd" class="yr-btn active" type="button" onclick="setIndMode('ytd')">YTD</button>
-          <button id="indModeYear" class="yr-btn" type="button" onclick="setIndMode('year')">Per jaar</button>
-          <button id="indFcBtn" class="yr-btn active" type="button" onclick="setIndFc()" title="Prognose 2 jaar o.b.v. historische groei">&#128200; Prognose 2 jr</button>
-          <button id="indTotBtn" class="yr-btn active" type="button" onclick="setIndTot()" title="Totaallijn (opgeteld over alle getoonde sectoren) tonen/verbergen">&#931; Totaallijn</button>
-        </div>
-        <span style="font-size:11px;color:var(--ink-3)">Filter A/B/C &amp; sectoren via de balk bovenaan het dashboard</span>
-      </div>
-      <div class="chart-box" style="margin-bottom:16px">
-        <div class="chart-title"><span id="indT1">Omzet per industrie</span><span class="sub">NET &euro;</span></div>
-        <div class="chart-canvas-wrap tall"><canvas id="chartIndRevYear"></canvas></div>
-      </div>
-      <div class="chart-box" style="margin-bottom:16px">
-        <div class="chart-title"><span id="indT2">Marktaandeel per industrie</span><span class="sub">% van totale omzet &middot; 100% gestapeld</span></div>
-        <div class="chart-canvas-wrap tall"><canvas id="chartIndShare"></canvas></div>
-      </div>
-      <div class="chart-box" style="margin-bottom:16px">
-        <div class="chart-title"><span id="indT3">Aantal orders per industrie</span><span class="sub">Aantal orders</span></div>
-        <div class="chart-canvas-wrap tall"><canvas id="chartIndOrdYear"></canvas></div>
-      </div>
-      <div class="chart-box" style="margin-bottom:16px">
-        <div class="chart-title"><span id="indT4">Gemiddelde orderwaarde per industrie</span><span class="sub">NET &euro; per order</span></div>
-        <div class="chart-canvas-wrap tall"><canvas id="chartIndAov"></canvas></div>
-      </div>
-    </div>
-  </section>
-
 
   <section class="tab-section" id="tab-maanden">
     <div class="chart-box" style="margin-bottom:16px">
@@ -1767,18 +1724,34 @@ const METRIC_DEFS = {
 // ===== Overzicht-tab: 2-jaars prognose (toggle per jaar) =====
 // OV_FC: 0 = uit · 1 = +1 jaar · 2 = +2 jaar. Groei = geometrisch gemiddelde (geklemd 0,5–2,0).
 // Startpunt lopend jaar = year_forecast (omzet/orders) of seizoensgeschaalde YTD→voljaar.
-let OV_FC = 0;
+let OV_FC = 0;         // toekomstjaren: 0 = uit · 1 = +1 jaar · 2 = +2 jaar
+let OV_CUR = false;    // 'dit jaar': voljaar-projectie van het lopende jaar tonen
 function setOvFc(n){
   if(n===1) OV_FC = (OV_FC>=1)?0:1;
   else if(n===2) OV_FC = (OV_FC>=2)?1:2;
   updateOvFcButtons();
   if(typeof renderYearYtdChart==='function') renderYearYtdChart();
 }
+function setOvCur(){
+  OV_CUR = !OV_CUR;
+  updateOvFcButtons();
+  if(typeof renderYearYtdChart==='function') renderYearYtdChart();
+}
 function updateOvFcButtons(){
   const cur=(DATA&&DATA.current_year)||new Date().getFullYear();
-  const b1=document.getElementById('ovFc1'), b2=document.getElementById('ovFc2');
+  const b0=document.getElementById('ovFc0'), b1=document.getElementById('ovFc1'), b2=document.getElementById('ovFc2');
+  if(b0){ b0.textContent=String(cur); b0.classList.toggle('active', OV_CUR); }
   if(b1){ b1.textContent='+ '+(cur+1); b1.classList.toggle('active', OV_FC>=1); }
   if(b2){ b2.textContent='+ '+(cur+2); b2.classList.toggle('active', OV_FC>=2); }
+}
+// Voljaar-schatting lopend jaar per metric (voor de 'dit jaar'-knop)
+function ovCurrentFull(metricName, def, cur){
+  if(metricName==='avg'){
+    const r=ovFullCurrentEst('revenue', METRIC_DEFS.revenue, cur);
+    const o=ovFullCurrentEst('orders', METRIC_DEFS.orders, cur);
+    return o? Math.round(r/o):0;
+  }
+  return Math.round(ovFullCurrentEst(metricName, def, cur));
 }
 function ovGrowth(arr){ const r=[]; for(let i=1;i<arr.length;i++){ if(arr[i-1]>0&&arr[i]>0) r.push(arr[i]/arr[i-1]); } if(!r.length) return 1; let p=1; r.forEach(function(x){p*=x;}); return Math.max(0.5, Math.min(2, Math.pow(p,1/r.length))); }
 function ovFullCurrentEst(metricName, def, cur){
@@ -1854,12 +1827,17 @@ function renderYearMetricChart(metricName){
     }
   };
 
-  // 2-jaars prognose: labels + jaartotaal uitbreiden; YTD blijft leeg voor prognosejaren (gestippeld).
+  // Prognose: 'dit jaar' (voljaar-projectie lopend jaar) + toekomstjaren; gestippeld getekend.
   const cur = DATA.current_year;
+  const curIdx = years.indexOf(cur);
+  const showCur = (typeof OV_CUR!=='undefined' && OV_CUR && curIdx>=0);
   const fc = (typeof OV_FC!=='undefined' && OV_FC>0) ? ovForecast(metricName, def, cur) : [];
   const lastRealIdx = years.length-1;
+  const projFrom = showCur ? curIdx : lastRealIdx;   // vanaf welk punt de lijn gestippeld is
+  const totalsBase = totals.slice();
+  if(showCur) totalsBase[curIdx] = ovCurrentFull(metricName, def, cur);   // voljaar-projectie i.p.v. YTD
   const labelsX = labels.concat(fc.map(function(v,k){ return String(cur+1+k); }));
-  const totalsX = totals.concat(fc);
+  const totalsX = totalsBase.concat(fc);
   const ytdsX   = ytds.concat(fc.map(function(){ return null; }));
 
   charts[def.chartKey] = new Chart(canvas, {
@@ -1867,7 +1845,7 @@ function renderYearMetricChart(metricName){
     data: {
       labels: labelsX,
       datasets: [
-        { label: def.totalLabel, data: totalsX, borderColor: def.colorTotal, backgroundColor: def.colorTotalFill, tension:.35, fill:'+1', pointRadius:6, pointHoverRadius:8, pointBackgroundColor: def.colorTotal, borderWidth:2.5, segment:{ borderDash:function(ctx){ return ctx.p0DataIndex>=lastRealIdx ? [6,4] : undefined; } } },
+        { label: def.totalLabel, data: totalsX, borderColor: def.colorTotal, backgroundColor: def.colorTotalFill, tension:.35, fill:'+1', pointRadius:6, pointHoverRadius:8, pointBackgroundColor: def.colorTotal, borderWidth:2.5, segment:{ borderDash:function(ctx){ return ctx.p0DataIndex>=projFrom ? [6,4] : undefined; } } },
         { label: def.ytdLabel,   data: ytdsX,   borderColor: def.colorYtd,   backgroundColor: def.colorYtdFill,   tension:.35, fill:'origin', pointRadius:6, pointHoverRadius:8, pointBackgroundColor: def.colorYtd,   borderWidth:2.5 }
       ]
     },
@@ -2020,30 +1998,34 @@ function renderClientsAbcChart(){
 
   // 2-jaars prognose (per A/B/C-klasse, groei-gebaseerd): extra 'Jaar'-bars, geen YTD-bar.
   let labelsC = labels;
-  if(typeof OV_FC!=='undefined' && OV_FC>0){
+  if(typeof OV_FC!=='undefined' && (OV_FC>0 || (typeof OV_CUR!=='undefined' && OV_CUR))){
     const cur=DATA.current_year;
     const iCur=years.indexOf(cur), iP=years.indexOf(cur-1), iPP=years.indexOf(cur-2);
     if(iCur>=0){
       const realLen=years.length;
-      const clsFc=function(cls){
+      const clsInfo=function(cls){
         const ytdC=(fullCounts[iCur]&&fullCounts[iCur][cls])||0;   // huidig jaar: full = ytd
         const fullP=(iP>=0&&fullCounts[iP])?fullCounts[iP][cls]:0;
         const ytdP=(iP>=0&&ytdCounts[iP])?ytdCounts[iP][cls]:0;
         const base=(ytdP>0&&fullP>0)? ytdC*(fullP/ytdP) : ytdC;   // seizoensgeschaald voljaar
         const fullPP=(iPP>=0&&fullCounts[iPP])?fullCounts[iPP][cls]:0;
         const g=ovGrowth([fullPP, fullP, base]);
-        return [Math.round(base*g), Math.round(base*g*g)].slice(0,OV_FC);
+        return {base:Math.round(base), fc:[Math.round(base*g), Math.round(base*g*g)].slice(0,OV_FC)};
       };
-      const fcMap={'A — Jaar':clsFc('A'),'B — Jaar':clsFc('B'),'C — Jaar':clsFc('C')};
+      const info={A:clsInfo('A'),B:clsInfo('B'),C:clsInfo('C')};
       const dim={A:A_C+'55', B:B_C+'55', C:C_C+'55'};
       const fcYears=[]; for(let k=0;k<OV_FC;k++) fcYears.push(String(cur+1+k));
       labelsC = labels.concat(fcYears);
       datasets.forEach(function(ds){
         if(ds._group==='full'){
           const cls=ds.label.charAt(0), solid=ds.backgroundColor;
-          ds.data=ds.data.concat(fcMap[ds.label]||[]);
-          ds.backgroundColor=Array(realLen).fill(solid).concat(Array(OV_FC).fill(dim[cls]));
-        } else { ds.data=ds.data.concat(Array(OV_FC).fill(null)); }   // geen YTD-bar voor prognosejaren
+          if(OV_CUR) ds.data[iCur]=info[cls].base;                 // 'dit jaar': voljaar-projectie i.p.v. YTD
+          ds.data=ds.data.concat(info[cls].fc);
+          const colors=Array(realLen).fill(solid);
+          if(OV_CUR) colors[iCur]=dim[cls];
+          for(let k=0;k<OV_FC;k++) colors.push(dim[cls]);
+          ds.backgroundColor=colors;
+        } else { ds.data=ds.data.concat(Array(OV_FC).fill(null)); }   // geen YTD-bar voor prognose-toekomstjaren
       });
     }
   }
@@ -2632,6 +2614,7 @@ function renderGlobalFilterBar(){
     html+='<button type="button" class="gf-chip'+(off?' off':'')+(sel?' sel':'')+'" onclick="setGlobalSector(\''+n.replace(/\x27/g,"\\\x27")+'\')" style="border-color:'+(off?'var(--border-2)':c)+'"><span class="gf-dot" style="background:'+c+'"></span>'+n+revTag+'</button>';
   });
   html+='</span><span id="gfIndLoading" style="display:none;color:var(--light-blue);font-size:11px;margin-left:6px">sectoren laden&hellip;</span>';
+  html+='<button type="button" class="gf-reset" onclick="refreshIndustries()" title="Sector-data opnieuw ophalen uit AMFG">&#8635; sectoren</button>';
   if(ACCOUNT_FILTER || INDUSTRY_SEL.length || CLIENT_FILTER) html+='<button type="button" class="gf-reset" onclick="clearGlobalFilters()">&times; reset</button>';
   el.innerHTML=html;
 }
