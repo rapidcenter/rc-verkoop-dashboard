@@ -316,6 +316,10 @@
   #tab-deze-maand .client-card{min-height:0;display:flex;flex-direction:column;overflow:hidden}
   #tab-deze-maand #monthTopList{flex:1 1 auto;min-height:0;max-height:none}
   @media (max-width:900px){.chart-grid{grid-template-columns:1fr}}
+  /* Overzicht YTD: vier grafieken in een 2-koloms raster (2x2) i.p.v. onder elkaar */
+  .ov-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:16px;align-items:stretch}
+  .ov-grid .chart-box{margin-bottom:0!important}
+  @media (max-width:1100px){.ov-grid{grid-template-columns:1fr}}
   .abc-tabbar{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap}
   .abc-tab-btn{background:var(--surface);border:1px solid var(--border-2);color:var(--ink-2);padding:8px 18px;border-radius:999px;font-family:'Roboto';font-size:12px;font-weight:600;letter-spacing:.03em;cursor:pointer;transition:all .15s ease}
   .abc-tab-btn:hover{border-color:var(--rc-blue);color:var(--white)}
@@ -590,6 +594,7 @@
 
   <section class="tab-section" id="tab-overzicht">
     <div class="kpi-grid" id="kpiGrid"></div>
+    <div class="ov-grid">
     <div class="chart-box" style="margin-bottom:16px">
       <div class="chart-title"><span>Omzet (intake)</span><span class="sub">Jaaromzet · YTD · YTD change vs vorig jaar</span></div>
       <div class="chart-canvas-wrap tall"><canvas id="chartYearYtd"></canvas></div>
@@ -609,6 +614,7 @@
       <div class="chart-title"><span>Gemiddelde orderwaarde</span><span class="sub">Jaartotaal · YTD · YTD change vs vorig jaar</span></div>
       <div class="chart-canvas-wrap tall"><canvas id="chartYearYtdAvg"></canvas></div>
       <div id="ytdChangeRowAvg" style="display:flex;justify-content:space-around;padding:6px 24px 14px;font-size:12px;color:var(--ink3);font-weight:500;letter-spacing:.02em"></div>
+    </div>
     </div>
   </section>
 
@@ -774,6 +780,14 @@
   .pl-stage-head.pl-active .pl-stage-name{color:var(--light-blue)}
   .pl-stage-head.pl-active{border-bottom-color:var(--rc-blue)}
   .pl-summary.pl-clickable:hover{border-color:var(--rc-blue)}
+  /* Onderhanden-werk-band: kleurt de tegel t.o.v. de dynamische streefvloer */
+  .pl-summary.wip-red{background:rgba(239,68,68,.13);border-color:#EF4444}
+  .pl-summary.wip-green{background:rgba(34,197,94,.13);border-color:#22C55E}
+  .pl-summary.wip-orange{background:rgba(245,158,11,.15);border-color:#F59E0B}
+  .pl-summary .pl-wip-sub{font-size:10.5px;margin-top:4px;font-weight:700;letter-spacing:.02em}
+  .pl-summary.wip-red .pl-wip-sub{color:#F87171}
+  .pl-summary.wip-green .pl-wip-sub{color:#4ADE80}
+  .pl-summary.wip-orange .pl-wip-sub{color:#FBBF24}
   .pl-clear{cursor:pointer;color:var(--light-blue);font-weight:700}
   .pl-clear:hover{text-decoration:underline}
 </style>
@@ -3433,6 +3447,29 @@ function invoiceForecastHTML(){
   f.months.forEach(function(m,i){ h+='<div class="pl-inv-row"><span class="l">'+f.labels[i]+'</span><span class="c">'+m.n+'</span><span class="e">'+eur(m.eur)+'</span></div>'; });
   return h+'</div>';
 }
+// ===== Onderhanden werk (WIP) vs. streefvloer =====
+// Vloer is DYNAMISCH: gemeten maand-doorzet × streef-doorlooptijd (Little's Law).
+// Band: te weinig (rood) · gezond (groen) · te veel (oranje). Draai aan WIP_TARGET_WEEKS.
+const WIP_TARGET_WEEKS = 2;     // streef-doorlooptijd van het onderhanden werk (weken)
+const WIP_BAND_MIN = 0.75;      // ondergrens gezonde band (× streef)
+const WIP_BAND_MAX = 1.5;       // bovengrens gezonde band (× streef)
+// Gem. maand-doorzet (NET, excl. cancelled) over de laatste 3 VOLLEDIGE kalendermaanden,
+// binnen het actieve filter (zelfde scope als de tegel).
+function monthlyThroughput(){
+  const rows=(typeof applyActiveRowFilters==='function') ? applyActiveRowFilters(ALL_ROWS||[]) : (ALL_ROWS||[]);
+  const now=new Date(); const curKey=now.getFullYear()*12+now.getMonth();
+  const bucket={};
+  rows.forEach(function(r){
+    const st=String(r['TICKET STATUS']||'').toLowerCase(); if(st.indexOf('cancel')>=0) return;
+    const net=parseFloat(r['TOTAL NET PRICE'])||0; if(net<=0) return;
+    const d=new Date(r['ORDER DATE']); if(isNaN(d)) return;
+    const key=d.getFullYear()*12+d.getMonth();
+    if(key>=curKey || key<curKey-3) return;   // alleen de 3 volledige maanden vóór nu
+    bucket[key]=(bucket[key]||0)+net;
+  });
+  const vals=Object.keys(bucket).map(function(k){return bucket[k];});
+  return vals.length ? vals.reduce(function(a,b){return a+b;},0)/vals.length : 0;
+}
 function renderPipeline(){
   const strip = document.getElementById('pipelineStrip');
   if(!strip) return;
@@ -3451,10 +3488,25 @@ function renderPipeline(){
   h += '<div class="pl-head"><div class="pl-title">Werkstroom — open orders</div>'+
        '<div class="pl-sub">Alle orders excl. Cancelled &amp; Order finished · NET-bedragen</div></div>';
   h += '<div class="pl-row">';
-  h += '<div class="pl-summary'+(hasSel?' pl-clickable':'')+'"'+(hasSel?' onclick="clearPipelineFilter()" title="Wis selectie / toon alle orders"':'')+'><div class="lbl">In productie (€)</div>'+
+  // Onderhanden werk vs. dynamische streefvloer (doorzet × streef-doorlooptijd)
+  const wipThrPerWeek = monthlyThroughput()/4.345;   // €/week
+  const wipWeeks = wipThrPerWeek>0 ? (exAmount/wipThrPerWeek) : 0;
+  let wipBand='', wipWord='';
+  if(wipThrPerWeek>0){
+    if(wipWeeks < WIP_TARGET_WEEKS*WIP_BAND_MIN){ wipBand='wip-red'; wipWord='te weinig'; }
+    else if(wipWeeks > WIP_TARGET_WEEKS*WIP_BAND_MAX){ wipBand='wip-orange'; wipWord='te veel'; }
+    else { wipBand='wip-green'; wipWord='gezond'; }
+  }
+  const wipTitle = wipThrPerWeek>0
+    ? 'Onderhanden werk = '+eur(exAmount)+' ≈ '+wipWeeks.toFixed(1).replace('.',',')+' weken werk (bij €'+Math.round(wipThrPerWeek*4.345).toLocaleString('nl-NL')+'/mnd). Streef ~'+WIP_TARGET_WEEKS+' wk; gezond '+(WIP_TARGET_WEEKS*WIP_BAND_MIN)+'–'+(WIP_TARGET_WEEKS*WIP_BAND_MAX)+' wk.'
+    : 'Onderhanden werk (bevestigde orders, excl. offertes & administratie)';
+  h += '<div class="pl-summary '+wipBand+(hasSel?' pl-clickable':'')+'" title="'+wipTitle+'"'+(hasSel?' onclick="clearPipelineFilter()"':'')+'><div class="lbl">Onderhanden werk (€)</div>'+
        '<div class="eur">'+eur(exAmount)+'</div>'+
        '<div class="cnt">'+exCount+' orders</div>'+
-       '<div class="pl-note">excl. administratie</div></div>';
+       (wipThrPerWeek>0
+         ? '<div class="pl-wip-sub">'+wipWord+' &middot; &asymp; '+wipWeeks.toFixed(1).replace('.',',')+' wk &middot; doel ~'+WIP_TARGET_WEEKS+' wk</div>'
+         : '<div class="pl-note">excl. administratie</div>')+
+       '</div>';
   pl.stages.forEach(function(st){
     h += '<div class="pl-arrow">&#9656;</div>';
     // Verkoop-fase: gewogen offerte-pipeline i.p.v. orders
