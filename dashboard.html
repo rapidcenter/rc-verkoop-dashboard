@@ -3600,7 +3600,8 @@ function renderPipeline(){
       h += '</div>';
       return;
     }
-    h += '<div class="pl-stage'+(st.count?'':' empty-stage')+'">';
+    // Administratie nooit vervagen: die cel draagt altijd de 'nog te factureren'-forecast.
+    h += '<div class="pl-stage'+((st.count || st.key==='administratie')?'':' empty-stage')+'">';
     const stageStatuses = st.subs.reduce(function(a,s){ return a.concat(s.statuses); }, []);
     const stageActive = stageStatuses.length > 0 && stageStatuses.every(function(st2){ return fset.indexOf(st2) >= 0; });
     if(st.subs.length){
