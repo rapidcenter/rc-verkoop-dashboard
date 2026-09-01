@@ -1228,13 +1228,11 @@ function renderLast6Chart(){
         return t;
       });
       const acctOrder = ['A','B','C'];
-      const yr = DATA.current_year, m = DATA.ytd_month;
-      // Bepaal welk jaar/maand bij elke index hoort
+      const yr = DATA.current_year;
+      // YTD-grafiek: balk-index = maand-index (0-based) van het lopende jaar.
+      // (Oude 'laatste 6 maanden'-mapping (5 - idx) liep 2 maanden uit de pas → jul/aug toonden (0,0).)
       const xIndex2Ym = chart.data.labels.map(function(_, idx){
-        const i = 5 - idx;
-        let mm = m - i, yy = yr;
-        while(mm <= 0 && isFinite(mm)){ mm += 12; yy -= 1; }
-        return {yy:yy, mm:mm-1};
+        return {yy:yr, mm:idx};
       });
       chart.data.datasets.forEach(function(ds, di){
         const meta = chart.getDatasetMeta(di);
