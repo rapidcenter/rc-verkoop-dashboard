@@ -988,14 +988,25 @@ function renderThisMonth(){
   // Werkdag-pacing voor lopende maand
   const wdElapsedMo = workingDays(projYear, projMonth, 1, dayOf);
   const wdTotalMo   = workingDays(projYear, projMonth, 1, daysIn);
-  const currMonthEstimate = wdElapsedMo > 0 ? currMonthActual * wdTotalMo / wdElapsedMo : currMonthActual;
+  const wdRemainMo  = Math.max(0, wdTotalMo - wdElapsedMo);
+  const growthF     = DATA.growth_factor || 1;
+  // Lopende maand = werkelijke omzet tot nu + seizoensverwachting voor de RESTERENDE werkdagen
+  // (vorig jaar zelfde maand × groei). Stabiel vanaf dag 1 (geen ruis van een kleine steekproef),
+  // convergeert naar de werkelijke maand aan het eind. Valt terug op run-rate als vorig jaar ontbreekt.
+  const seasonalCurrRev = ((DATA.full[yr-1] && DATA.full[yr-1].monthly_revenue[idx]) || 0) * growthF;
+  const currMonthEstimate = seasonalCurrRev > 0
+    ? currMonthActual + seasonalCurrRev * (wdTotalMo>0 ? wdRemainMo/wdTotalMo : 0)
+    : (wdElapsedMo > 0 ? currMonthActual * wdTotalMo / wdElapsedMo : currMonthActual);
   const fcFuture = (DATA.forecast_revenue||[]).slice(idx+1).reduce((a,b)=>a+(b||0),0);
   const fullYearFc = ytdClosed + currMonthEstimate + fcFuture;
   // === Jaar-prognose ORDERS (zelfde werkdag-methode als omzet) + jaar-werkdagen ===
   let ytdClosedOrd = 0;
   for(let m=0; m<idx; m++) ytdClosedOrd += (DATA.years[yr].monthly_orders[m] || 0);
   const currMonthActualOrd = DATA.years[yr].monthly_orders[idx] || 0;
-  const currMonthOrdEstimate = wdElapsedMo > 0 ? currMonthActualOrd * wdTotalMo / wdElapsedMo : currMonthActualOrd;
+  const seasonalCurrOrd = ((DATA.full[yr-1] && DATA.full[yr-1].monthly_orders[idx]) || 0) * growthF;
+  const currMonthOrdEstimate = seasonalCurrOrd > 0
+    ? currMonthActualOrd + seasonalCurrOrd * (wdTotalMo>0 ? wdRemainMo/wdTotalMo : 0)
+    : (wdElapsedMo > 0 ? currMonthActualOrd * wdTotalMo / wdElapsedMo : currMonthActualOrd);
   const fcFutureOrd = (DATA.forecast_orders||[]).slice(idx+1).reduce((a,b)=>a+(b||0),0);
   const yearProjOrd = Math.round(ytdClosedOrd + currMonthOrdEstimate + fcFutureOrd);
   let wdYearElapsed = 0, wdYearTotal = 0;
