@@ -983,14 +983,26 @@ function renderThisMonth(){
   const qLabel = function(qi){ return (qi*3+2 < idx) ? ('Q'+(qi+1)) : ('Q'+(qi+1)+' prognose'); };  // volledig afgesloten = Qx; anders prognose
   const q3c = qVal(2), q4c = qVal(3);
   const q3ref = qRefFull(2), q4ref = qRefFull(3);
+  // A/B/C-split per kwartaal voor het gekleurde balkje: werkelijk voor afgesloten maanden,
+  // resterende (lopende + toekomst) verdeeld volgens de YTD A/B/C-verhouding.
+  const _ytdSplitQ = (DATA.account_breakdown && DATA.account_breakdown.total_2026_ytd) || {A:0,B:0,C:0};
+  const _ytdTotQ = (_ytdSplitQ.A||0)+(_ytdSplitQ.B||0)+(_ytdSplitQ.C||0);
+  const _mbQ = (DATA.account_breakdown && DATA.account_breakdown['monthly_'+yr]) || null;
+  const qSplit = function(qi){
+    let a=0,b=0,c=0;
+    if(_mbQ){ for(let m=qi*3;m<qi*3+3 && m<idx;m++){ a+=_mbQ.A[m]||0; b+=_mbQ.B[m]||0; c+=_mbQ.C[m]||0; } }
+    const remaining=Math.max(0, qVal(qi)-(a+b+c));
+    if(remaining>0 && _ytdTotQ>0){ a+=remaining*_ytdSplitQ.A/_ytdTotQ; b+=remaining*_ytdSplitQ.B/_ytdTotQ; c+=remaining*_ytdSplitQ.C/_ytdTotQ; }
+    return {A:Math.round(a), B:Math.round(b), C:Math.round(c)};
+  };
   const cells = [];
   cells.push('<div class="yh-cell"><div class="yh-cell-lbl">Totaal omzet</div><div class="yh-cell-val">'+fmtEur(cYTD.total_revenue)+'</div>'+makeDelta(cYTD.total_revenue,pYTD.total_revenue)+stackBarHTML((DATA.account_breakdown&&DATA.account_breakdown.total_2026_ytd)||{})+'</div>');
   cells.push('<div class="yh-cell"><div class="yh-cell-lbl">Aantal orders</div><div class="yh-cell-val">'+fmtNum(cYTD.total_orders)+'</div>'+makeDelta(cYTD.total_orders,pYTD.total_orders)+'</div>');
   cells.push('<div class="yh-cell"><div class="yh-cell-lbl">Gem. orderwaarde</div><div class="yh-cell-val">'+fmtEur(cYTD.avg_order)+'</div>'+makeDelta(cYTD.avg_order,pYTD.avg_order)+'</div>');
   cells.push('<div class="yh-cell q"><div class="yh-cell-lbl">Q1</div><div class="yh-cell-val">'+fmtEurShort(q1c)+'</div>'+makeDelta(q1c,q1p)+stackBarHTML((DATA.account_breakdown&&DATA.account_breakdown.q1_2026)||{})+'</div>');
   cells.push('<div class="yh-cell q"><div class="yh-cell-lbl">'+q2Label+'</div><div class="yh-cell-val">'+fmtEurShort(q2c)+'</div>'+makeDelta(q2c,q2p_sameRange)+stackBarHTML((DATA.account_breakdown&&DATA.account_breakdown.q2_2026_ytd)||{})+'</div>');
-  cells.push('<div class="yh-cell q"><div class="yh-cell-lbl">'+qLabel(2)+'</div><div class="yh-cell-val">'+fmtEurShort(q3c)+'</div>'+makeDelta(q3c,q3ref)+'</div>');
-  cells.push('<div class="yh-cell q"><div class="yh-cell-lbl">'+qLabel(3)+'</div><div class="yh-cell-val">'+fmtEurShort(q4c)+'</div>'+makeDelta(q4c,q4ref)+'</div>');
+  cells.push('<div class="yh-cell q"><div class="yh-cell-lbl">'+qLabel(2)+'</div><div class="yh-cell-val">'+fmtEurShort(q3c)+'</div>'+makeDelta(q3c,q3ref)+stackBarHTML(qSplit(2))+'</div>');
+  cells.push('<div class="yh-cell q"><div class="yh-cell-lbl">'+qLabel(3)+'</div><div class="yh-cell-val">'+fmtEurShort(q4c)+'</div>'+makeDelta(q4c,q4ref)+stackBarHTML(qSplit(3))+'</div>');
   // Prognose hele jaar = YTD omzet + som forecast van toekomstige maanden
   // Jaar-prognose stabiel maken:
   //   afgesloten maanden (jan..vorige) = werkelijke omzet
