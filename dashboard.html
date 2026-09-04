@@ -965,21 +965,32 @@ function renderThisMonth(){
   const q2p_sameRange = sumRange(pFull.monthly_revenue, q2startMonth, q2endMonth);
   const q2pFull = sumRange(pFull.monthly_revenue, 3, 5);
   const q2Label = (idx>=5) ? 'Q2' : 'Q2 YTD';
-  // Q3, Q4 (jul-sep, okt-dec)
-  const q3p = sumRange(pFull.monthly_revenue,6,8);
-  const q4p = sumRange(pFull.monthly_revenue,9,11);
-  const q3Fc = sumRange(DATA.forecast_revenue||[],6,8);
-  const q4Fc = sumRange(DATA.forecast_revenue||[],9,11);
+  // Kwartaal-projectie: afgesloten maanden = werkelijk, lopende maand = seizoensschatting, toekomst = forecast.
+  const _growthF = DATA.growth_factor || 1;
+  const _currMonthActualQ = cYTD.monthly_revenue[idx] || 0;
+  const _wdRemainMoQ = Math.max(0, wdTotal - wdElapsed);
+  const _seasonalCurQ = (pFull.monthly_revenue[idx] || 0) * _growthF;
+  const _currMonthEstQ = _seasonalCurQ>0
+    ? _currMonthActualQ + _seasonalCurQ*(wdTotal>0 ? _wdRemainMoQ/wdTotal : 0)
+    : (wdElapsed>0 ? _currMonthActualQ*wdTotal/wdElapsed : _currMonthActualQ);
+  const projMonthRev = function(m){
+    if(m<idx) return cYTD.monthly_revenue[m]||0;              // afgesloten maand = werkelijk
+    if(m===idx) return _currMonthEstQ;                        // lopende maand = schatting
+    return (DATA.forecast_revenue && DATA.forecast_revenue[m]) || 0;   // toekomst = forecast
+  };
+  const qVal = function(qi){ let s=0; for(let m=qi*3;m<qi*3+3;m++) s+=projMonthRev(m); return s; };
+  const qRefFull = function(qi){ return sumRange(pFull.monthly_revenue, qi*3, qi*3+2); };
+  const qLabel = function(qi){ return (qi*3+2 < idx) ? ('Q'+(qi+1)) : ('Q'+(qi+1)+' prognose'); };  // volledig afgesloten = Qx; anders prognose
+  const q3c = qVal(2), q4c = qVal(3);
+  const q3ref = qRefFull(2), q4ref = qRefFull(3);
   const cells = [];
   cells.push('<div class="yh-cell"><div class="yh-cell-lbl">Totaal omzet</div><div class="yh-cell-val">'+fmtEur(cYTD.total_revenue)+'</div>'+makeDelta(cYTD.total_revenue,pYTD.total_revenue)+stackBarHTML((DATA.account_breakdown&&DATA.account_breakdown.total_2026_ytd)||{})+'</div>');
   cells.push('<div class="yh-cell"><div class="yh-cell-lbl">Aantal orders</div><div class="yh-cell-val">'+fmtNum(cYTD.total_orders)+'</div>'+makeDelta(cYTD.total_orders,pYTD.total_orders)+'</div>');
   cells.push('<div class="yh-cell"><div class="yh-cell-lbl">Gem. orderwaarde</div><div class="yh-cell-val">'+fmtEur(cYTD.avg_order)+'</div>'+makeDelta(cYTD.avg_order,pYTD.avg_order)+'</div>');
   cells.push('<div class="yh-cell q"><div class="yh-cell-lbl">Q1</div><div class="yh-cell-val">'+fmtEurShort(q1c)+'</div>'+makeDelta(q1c,q1p)+stackBarHTML((DATA.account_breakdown&&DATA.account_breakdown.q1_2026)||{})+'</div>');
   cells.push('<div class="yh-cell q"><div class="yh-cell-lbl">'+q2Label+'</div><div class="yh-cell-val">'+fmtEurShort(q2c)+'</div>'+makeDelta(q2c,q2p_sameRange)+stackBarHTML((DATA.account_breakdown&&DATA.account_breakdown.q2_2026_ytd)||{})+'</div>');
-  if(idx<6){
-    cells.push('<div class="yh-cell q"><div class="yh-cell-lbl">Q3 prognose</div><div class="yh-cell-val">'+fmtEurShort(q3Fc)+'</div>'+makeDelta(q3Fc,q3p)+'</div>');
-    cells.push('<div class="yh-cell q"><div class="yh-cell-lbl">Q4 prognose</div><div class="yh-cell-val">'+fmtEurShort(q4Fc)+'</div>'+makeDelta(q4Fc,q4p)+'</div>');
-  }
+  cells.push('<div class="yh-cell q"><div class="yh-cell-lbl">'+qLabel(2)+'</div><div class="yh-cell-val">'+fmtEurShort(q3c)+'</div>'+makeDelta(q3c,q3ref)+'</div>');
+  cells.push('<div class="yh-cell q"><div class="yh-cell-lbl">'+qLabel(3)+'</div><div class="yh-cell-val">'+fmtEurShort(q4c)+'</div>'+makeDelta(q4c,q4ref)+'</div>');
   // Prognose hele jaar = YTD omzet + som forecast van toekomstige maanden
   // Jaar-prognose stabiel maken:
   //   afgesloten maanden (jan..vorige) = werkelijke omzet
