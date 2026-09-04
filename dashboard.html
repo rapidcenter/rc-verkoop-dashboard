@@ -121,6 +121,8 @@
   .global-filter .gf-chip.active,.global-filter .gf-chip.sel{background:var(--rc-blue);border-color:var(--rc-blue)!important;color:#fff;font-weight:700}
   .global-filter .gf-chip .gf-rev{margin-left:5px;font-weight:700;opacity:.7}
   .global-filter .gf-chip.sel .gf-rev{opacity:.9}
+  .global-filter .gf-chip .gf-pct{margin-left:4px;font-weight:700;opacity:.5}
+  .global-filter .gf-chip.sel .gf-pct{opacity:.8}
   .global-filter .gf-reset{margin-left:auto;background:var(--rc-blue);color:#fff;border:0;border-radius:999px;padding:4px 12px;font:700 11px 'Roboto';cursor:pointer}
   main{padding:20px 24px;max-width:none}
   .tab-section{display:none}
@@ -343,7 +345,8 @@
   .client-card-header .y24{color:var(--c24)}
   .client-card-header .y25{color:var(--c25)}
   .client-card-header .y26{color:var(--c26)}
-  .client-list-head,.client-row{display:grid;grid-template-columns:30px 1fr 90px 50px 80px;gap:8px;align-items:center;padding:8px 14px;font-size:12px;caret-color:transparent}
+  .client-list-head,.client-row{display:grid;grid-template-columns:30px 1fr 118px 48px 72px;gap:8px;align-items:center;padding:8px 14px;font-size:12px;caret-color:transparent}
+  .client-row .rev-pct{opacity:.55;font-weight:400;font-size:11px;margin-left:3px}
   .client-list-head{background:var(--surface2);font-family:'Roboto';font-size:11px;letter-spacing:1.2px;text-transform:uppercase;color:var(--muted)}
   .client-row{border-bottom:1px solid var(--surface2)}
   .client-row:last-child{border-bottom:0}
@@ -1483,7 +1486,8 @@ function renderClients(){
       const w = (c.revenue/maxRev*100).toFixed(0);
       const badge = '<span class="abc-mini abc-'+c.cls+'">'+c.cls+'</span>';
       const hist = historyTag(yr, c.name);
-      rows += '<div class="client-row"><span class="rank">#'+(i+1)+'</span><span class="name abc-clickable" title="Klik om op deze klant te filteren" onclick="applyClientFilter(\''+c.name.replace(/\x27/g, "\\\x27")+'\')">'+badge+c.name+hist+((yr===DATA.current_year)?aRiskTag(c.name):'')+'</span><span class="rev">'+fmtEurShort(c.revenue)+'</span><span class="orders">'+c.orders+'</span><div class="bar"><div style="width:'+w+'%;background:'+YEAR_COLORS[yr]+'"></div></div></div>';
+      const revPct = totRev>0 ? ' <span class="rev-pct">('+Math.round(c.revenue/totRev*100)+'%)</span>' : '';
+      rows += '<div class="client-row"><span class="rank">#'+(i+1)+'</span><span class="name abc-clickable" title="Klik om op deze klant te filteren" onclick="applyClientFilter(\''+c.name.replace(/\x27/g, "\\\x27")+'\')">'+badge+c.name+hist+((yr===DATA.current_year)?aRiskTag(c.name):'')+'</span><span class="rev">'+fmtEurShort(c.revenue)+revPct+'</span><span class="orders">'+c.orders+'</span><div class="bar"><div style="width:'+w+'%;background:'+YEAR_COLORS[yr]+'"></div></div></div>';
     });
     if(!rows) rows = '<div class="empty" style="padding:16px;color:var(--ink-3)">Geen '+(flt==='all'?'':flt+'-')+'accounts in '+yr+'</div>';
     html += '<div class="client-card"><div class="client-card-header"><span class="'+yearClass+'">'+yr+' YTD &mdash; '+labelMap[flt]+'</span><span class="'+yearClass+'">'+list.length+' &middot; '+fmtEurK(totRev)+'</span></div><div class="client-list-head"><span>#</span><span>Klant</span><span style="text-align:right">Omzet</span><span style="text-align:right">Orders</span><span>Aandeel</span></div><div class="client-rows">'+rows+'</div></div>';
@@ -2616,6 +2620,7 @@ function renderGlobalFilterBar(){
   // niet geladen, dan tonen we alles zodat een klik de lazy-load kan starten.
   const present = sectorsWithOrders();
   const secRev = sectorRevenueMap();   // omzet (NET, lopend jaar) per sector voor het label
+  const secTotal = Object.keys(secRev).reduce(function(a,k){ return a+(secRev[k]||0); }, 0);   // totale omzet (alle sectoren) voor het %-aandeel
   const shownSectors = (present ? ALL_SECTORS.filter(function(n){ return present.has(n) || INDUSTRY_SEL.indexOf(n)>=0; }) : ALL_SECTORS)
     .filter(function(n){ return HIDDEN_SECTORS.indexOf(n)<0; })   // Particulier/Onbekend altijd verbergen
     .sort(function(a,b){ return (secRev[b]||0)-(secRev[a]||0); });   // hoogste omzet eerst
@@ -2624,7 +2629,8 @@ function renderGlobalFilterBar(){
     const sel = (INDUSTRY_SEL.indexOf(n)>=0);
     const off = (INDUSTRY_SEL.length && !sel);   // niet-geselecteerde sectoren dimmen zodra er ≥1 gekozen is
     const rev = secRev[n] || 0;
-    const revTag = rev>0 ? '<span class="gf-rev">'+fmtEurK(rev)+'</span>' : '';
+    const pct = secTotal>0 ? Math.round(rev/secTotal*100) : 0;   // aandeel t.o.v. totale omzet
+    const revTag = rev>0 ? '<span class="gf-rev">'+fmtEurK(rev)+'</span><span class="gf-pct">'+pct+'%</span>' : '';
     html+='<button type="button" class="gf-chip'+(off?' off':'')+(sel?' sel':'')+'" onclick="setGlobalSector(\''+n.replace(/\x27/g,"\\\x27")+'\')" style="border-color:'+(off?'var(--border-2)':c)+'"><span class="gf-dot" style="background:'+c+'"></span>'+n+revTag+'</button>';
   });
   html+='</span><span id="gfIndLoading" style="display:none;color:var(--light-blue);font-size:11px;margin-left:6px">sectoren laden&hellip;</span>';
