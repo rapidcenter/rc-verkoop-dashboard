@@ -878,9 +878,19 @@ function stackBarHTML(split, opts){
 }
 
 function renderThisMonth(){
-  const yr = DATA.current_year;
-  const m = DATA.ytd_month;
-  const idx = m - 1;
+  // "Deze Maand" moet altijd de ECHTE kalendermaand tonen, ongeacht welke laadkeuze
+  // (volledige historie / alleen dit jaar / alleen deze maand) de dataset heeft gevuld.
+  // Voorheen werd hiervoor DATA.ytd_month gebruikt — de HOOGSTE maand met minstens
+  // 1 order in de geladen set, niet per se de huidige maand. Bij "alleen dit jaar"
+  // kon dat terugvallen op de vorige maand (bv. als de lopende maand nog geen order
+  // had op het moment van laden), terwijl "alleen deze maand" altijd op de echte
+  // kalendermaand afdwingt — vandaar een schijnbaar andere omzet voor "deze maand"
+  // tussen de twee laadkeuzes. Val alleen terug op de oude cutoff-maand als er domweg
+  // geen data voor het echte huidige jaar geladen is (randgeval). Zie ACTIVITY_LOG.
+  const now = new Date();
+  const trueYear = now.getFullYear();
+  const yr = DATA.years[trueYear] ? trueYear : DATA.current_year;
+  const idx = (yr === trueYear) ? now.getMonth() : (DATA.ytd_month - 1);
   const curYr = DATA.years[yr];
   const prevYr = DATA.years[yr-1] || null;
   const fullPrev = DATA.full[yr-1] || null;
