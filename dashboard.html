@@ -1096,11 +1096,16 @@ function renderThisMonth(){
       return '<div class="kpi"><div class="kpi-label">Projectie volledige maand</div><div class="kpi-value" style="color:'+projColor+'">'+fmtEurShort(projRev)+'</div><div class="kpi-sub">~'+fmtNum(projOrd)+' orders &middot; '+wdElapsed+'/'+wdTotal+' werkdagen verstreken'+(wdRemaining>0?' ('+wdRemaining+' te gaan)':' &mdash; maand voorbij')+'<br>'+deltaTxt+(projConfidence < 0.3 && wdRemaining > 0 ? ' <span style="color:var(--amber);font-size:11px">⚠ '+Math.round(projConfidence*100)+'% verstreken — nog onbetrouwbaar</span>' : '')+'</div></div>';
     })();
   const recent = DATA.recent_orders || [];
-  // Standaardlijst = lopend werk (zelfde universum als de werkstroom-strip):
-  // alle orders behalve Cancelled en Order finished, ongecapt en op datum gesorteerd.
+  // Werkstroom-klik filtert nog altijd binnen het openstaande werk (pipeline_orders) —
+  // dat is precies het universum waar de werkstroom-strip zijn tegels/tellingen op baseert.
   const active = DATA.pipeline_orders || recent;
+  // Standaardlijst (geen werkstroom-filter) = ALLE orders van dit jaar, elke status
+  // behalve Cancelled — niet alleen het nog-openstaande werk. Op verzoek van Floris
+  // (2026-10-01): voorheen toonde deze lijst alleen lopende orders, nu het volledige
+  // jaaroverzicht inclusief afgeronde/gefactureerde orders.
+  const yearAll = DATA.year_orders || recent;
   const plSel = (typeof PIPELINE_SEL !== 'undefined') ? PIPELINE_SEL : [];
-  let list = active, isFiltered = false;
+  let list = yearAll, isFiltered = false;
   if(plSel && plSel.length){
     list = active.filter(function(o){ return plSel.indexOf(o.status) >= 0; });
     isFiltered = true;
@@ -1110,14 +1115,18 @@ function renderThisMonth(){
     document.getElementById('monthTopHeader').textContent = 'Werkstroom · ' + lbl;
     document.getElementById('monthTopTotal').innerHTML = list.length + ' orders &middot; ' + fmtEur(sum) + ' &middot; <span class="pl-clear" onclick="clearPipelineFilter()" title="Wis selectie">&times; wissen</span>';
   } else {
-    const sum = active.reduce(function(a,o){ return a + (o.gross||o.revenue||0); }, 0);
-    document.getElementById('monthTopHeader').textContent = 'Lopende orders';
-    document.getElementById('monthTopTotal').innerHTML = active.length + ' orders &middot; ' + fmtEur(sum);
+    const sum = yearAll.reduce(function(a,o){ return a + (o.gross||o.revenue||0); }, 0);
+    document.getElementById('monthTopHeader').textContent = 'Orders dit jaar';
+    document.getElementById('monthTopTotal').innerHTML = yearAll.length + ' orders &middot; ' + fmtEur(sum);
   }
   if(list.length===0){
     document.getElementById('monthTopList').innerHTML = isFiltered ? '<div class="empty">Geen orders in deze status.</div>' : '<div class="empty">Klik op &#8635; Excel laden om orders te tonen.</div>';
   } else {
-    document.getElementById('monthTopList').innerHTML = list.slice(0, 500).map(function(o){
+    // Render-cap als vangnet voor browserprestaties, niet als functionele limiet — ruim
+    // boven een normaal jaarvolume (orders dit jaar = DATA.year_orders, zie hierboven).
+    // Zichtbaar afgekapt i.p.v. stil, zodat het nooit lijkt op "ontbrekende" orders.
+    const RENDER_CAP = 3000;
+    const rows = list.slice(0, RENDER_CAP).map(function(o){
       const d = new Date(o.date);
       const ds = isNaN(d) ? o.date : d.toLocaleDateString('nl-NL',{day:'2-digit',month:'short',year:'2-digit'});
       const pct = pctYTD(o.client_ytd||0);
@@ -1137,6 +1146,8 @@ function renderThisMonth(){
         '<span class="alltime">'+fmtEur(o.client_all||0)+'</span>'+
       '</div>';
     }).join('');
+    const truncNote = (list.length > RENDER_CAP) ? '<div class="empty" style="padding:10px;font-size:11px">Lijst beperkt tot de meest recente '+RENDER_CAP.toLocaleString('nl-NL')+' van '+list.length.toLocaleString('nl-NL')+' orders (prestatie-vangnet).</div>' : '';
+    document.getElementById('monthTopList').innerHTML = rows + truncNote;
   }
   document.getElementById('last6Sub').textContent = 'Jan - '+MONTHS_FULL[idx].toLowerCase()+' '+yr;
 }
@@ -3100,6 +3111,40 @@ function processExcelData(rows, fileName){
     };
   }).sort(function(a,b){return b._ts-a._ts;}).map(function(o){delete o._ts; return o;});
   DATA.pipeline_orders = pipelineOrders;
+
+  // ALLE orders van het lopende jaar, elke status behalve Cancelled, ongecapt — op
+  // verzoek van Floris: de standaardlijst ("Lopende orders") toonde alleen nog-open
+  // werk (pipelineOrders hierboven); dit is het volledige jaaroverzicht inclusief
+  // afgeronde/gefactureerde orders. Zie ACTIVITY_LOG 2026-10-01.
+  const yearOrders = rows.filter(function(r){
+    const st = String(r['TICKET STATUS']||'').toLowerCase();
+    if(st.indexOf('cancel')>=0) return false;
+    if((parseFloat(r['TOTAL NET PRICE'])||0) <= 0) return false;
+    const rawDate = r['ORDER DATE']; if(!rawDate) return false;
+    const dt = (rawDate instanceof Date) ? rawDate : new Date(rawDate);
+    return !isNaN(dt) && dt.getFullYear()===currYear;
+  }).map(function(r){
+    let dt = r['ORDER DATE'];
+    if(typeof dt === 'string') dt = new Date(dt);
+    else if(!(dt instanceof Date)) dt = new Date(dt);
+    const key = String(r['CUSTOMER COMPANY']||r['BILLING COMPANY']||'Onbekend').trim();
+    return {
+      date: isNaN(dt) ? '' : dt.toISOString().slice(0,10),
+      time: isNaN(dt) ? '' : String(dt.getHours()).padStart(2,'0')+':'+String(dt.getMinutes()).padStart(2,'0'),
+      _ts: isNaN(dt) ? 0 : dt.getTime(),
+      project: String(r['PROJECT ID']||''),
+      client: key,
+      cust: (r['CUSTOMER ID']!=null ? String(r['CUSTOMER ID']) : ''),
+      status: String(r['TICKET STATUS']||'').trim(),
+      notes: String(r['CUSTOM PROJECT ID']||'').trim(),
+      gross: Math.round(parseFloat(r['TOTAL NET PRICE'])||0),
+      client_ytd: Math.round(ytdAgg[key]||0),
+      client_prev_ytd: Math.round(prevYtdAgg[key]||0),
+      client_prev: Math.round(prevAgg[key]||0),
+      client_all: Math.round(allAgg[key]||0)
+    };
+  }).sort(function(a,b){return b._ts-a._ts;}).map(function(o){delete o._ts; return o;});
+  DATA.year_orders = yearOrders;
 
   // Alle (niet-geannuleerde) orders met datumdetail — voor de dag-grafiek per maand.
   DATA.all_orders = rows.filter(function(r){
