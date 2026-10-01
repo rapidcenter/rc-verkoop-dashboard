@@ -3855,10 +3855,24 @@ async function ensureIndustryLoaded(){
   renderGlobalFilterBar();   // filterbalk verversen: sectoren zonder orders vallen nu weg / erbij
 }
 
-// Handmatig verversen: cache legen en opnieuw ophalen
+// Handmatig verversen: cache legen en opnieuw ophalen (gebruikt dezelfde overlay als
+// setGlobalSector() — de oude Industrie-tab UI (indProgress/indBody) bestaat niet meer
+// sinds die tab verwijderd is, dus die gaf hier geen enkele zichtbare feedback meer: de
+// fetch liep gewoon stil op de achtergrond en de knop "deed niets" terwijl hij wel bezig was.)
 async function refreshIndustries(){
+  if(INDUSTRY_LOADING) return;
   INDUSTRY_MAP={}; saveIndustryCache(); INDUSTRY_LOADED=false;
-  await ensureIndustryLoaded();
+  INDUSTRY_LOADING=true; setGlobalIndLoading(true);
+  const ids=uniqueCustomerIds();
+  showSectorLoading(0, ids.length);
+  try{ await amfgFetchIndustries(function(done,total){ showSectorLoading(done,total); }); }
+  catch(e){ console.warn('sectoren verversen faalde', e); }
+  INDUSTRY_LOADING=false; INDUSTRY_LOADED=true;
+  setGlobalIndLoading(false);
+  hideSectorLoading();
+  renderIndustry();
+  renderGlobalFilterBar();
+  reapplyFilters();
 }
 
 function setIndMode(m){
