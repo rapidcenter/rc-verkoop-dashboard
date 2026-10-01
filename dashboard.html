@@ -4709,7 +4709,13 @@ async function amfgFetchSince(days){
   let token=null; try{ token=localStorage.getItem('accessToken'); }catch(e){}
   if(!token) return null;
   const H={Authorization:token, Accept:'application/json'};
-  const since=new Date(); since.setDate(since.getDate()-days);
+  // Ankeren op lokale MIDDERNACHT van de startdag, niet op het huidige kloktijdstip:
+  // "new Date(); setDate(getDate()-days)" houdt het huidige uur/minuut aan, dus bij
+  // "Alleen deze maand" op bv. de 1e van de maand (days=0) begon het venster pas vanaf
+  // NU in plaats van vanaf 00:00 — alle orders van eerder vandaag vielen dan buiten de
+  // fetch en het dashboard toonde ten onrechte "Geen orders in deze selectie". Geldt ook
+  // voor de 5-min-refresh (amfgFetchSince(42)): daar maakt een paar extra uren niets uit.
+  const since=new Date(); since.setDate(since.getDate()-days); since.setHours(0,0,0,0);
   const to=new Date(); to.setDate(to.getDate()+2);
   const range='from.orderCreatedAt='+encodeURIComponent('"'+since.toISOString()+'"')+'&to.orderCreatedAt='+encodeURIComponent('"'+to.toISOString()+'"');
   const common='limit=200&sort.by=projectId&sort.direction=desc&total=-1&temporaryTotal=0&maxPage=0&isTotalLoaded=false&isTotalLoading=false&stateFilters=%7B%7D&search.filter=&'+range;
