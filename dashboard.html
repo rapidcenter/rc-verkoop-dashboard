@@ -2801,7 +2801,14 @@ async function amfgAugment(){
   AMFG_LOADING = false;
   if(amfg && amfg.length){ const bar=document.getElementById('amfgBar'), txt=document.getElementById('amfgTxt'); if(bar) bar.style.width='100%'; if(txt) txt.textContent='verwerken…'; }
   if(loadEl){ loadEl.classList.remove('show'); loadEl.textContent='Excel verwerken…'; }
-  if(!amfg || !amfg.length){ updateNoDataOverlay(); return false; }   // geen AMFG-sessie -> Excel/embedded blijft (geen fout)
+  // amfg===null betekent een ECHTE fetch-fout (geen/verlopen AMFG-sessie, netwerkfout) —
+  // dan terecht de "Log in bij AMFG"-overlay tonen. Een lege array (amfg=[], met geldige
+  // sessie) is GEEN inlogprobleem: bv. bij "Alleen deze maand" vóór de eerste order van de
+  // maand (zoals op de 1e) geeft AMFG terecht 0 resultaten terug. Voorheen werden beide
+  // gevallen hetzelfde behandeld (`!amfg || !amfg.length`), waardoor een ingelogde Floris
+  // op bv. de 1e van de maand ten onrechte de inlogmelding kreeg. Zie ACTIVITY_LOG.
+  if(amfg===null){ updateNoDataOverlay(); return false; }
+  const nd2 = document.getElementById('noDataOverlay'); if(nd2) nd2.style.display='none';
   AMFG_ACTIVE=true;
   // Behoud base-rijen van jaren die AMFG NIET dekt (< fromYear); vervang de rest door AMFG.
   const merged=base.filter(function(r){ const d=new Date(r['ORDER DATE']); return isNaN(d) || d.getFullYear() < fromYear; }).concat(amfg);
