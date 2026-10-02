@@ -626,6 +626,11 @@
       <div id="ytdChangeRowAvg" style="display:flex;justify-content:space-around;padding:6px 24px 14px;font-size:12px;color:var(--ink3);font-weight:500;letter-spacing:.02em"></div>
     </div>
     </div>
+    <div style="display:flex;align-items:center;gap:10px;margin:22px 0 12px">
+      <span style="font-family:'Roboto';font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--white);font-weight:700">Omzet per sector</span>
+      <span style="color:var(--ink-3);font-size:11px;letter-spacing:.05em">Zelfde weergave als hierboven, nu per sector &middot; sorteert op omzet-aandeel</span>
+    </div>
+    <div class="ov-grid" id="sectorChartsGrid"><div class="empty" style="grid-column:1/-1">Sectordata laden&hellip;</div></div>
   </section>
 
   <section class="tab-section" id="tab-klanten">
@@ -2180,6 +2185,7 @@ function renderYearYtdChart(){
   renderClientsAbcChart();             // gespecialiseerde A/B/C versie
   renderYearMetricChart('avg');
   if(typeof updateOvFcButtons==='function') updateOvFcButtons();
+  if(typeof renderSectorCharts==='function') renderSectorCharts();
 }
 
 // setRevMode is verouderd — Overzicht-tab gebruikt nu alleen jaar-vs-YTD charts.
@@ -3769,6 +3775,10 @@ function refreshDashboard(){
   // Industrie-tab live bijwerken als die open staat en de data al geladen is
   const indTab = document.getElementById('tab-industrie');
   if(indTab && indTab.classList.contains('active') && INDUSTRY_LOADED && !INDUSTRY_LOADING) renderIndustry();
+  // Sector-charts op Overzicht-tab hebben INDUSTRY_MAP nodig; die laadde voorheen pas
+  // na een handmatige chip-klik of "↻ sectoren". Nu automatisch op de achtergrond laden
+  // zodra er basisdata is, zodat de grafieken niet oneindig op "laden…" blijven staan.
+  if(baseDataLoaded() && typeof ensureIndustryLoaded==='function' && !INDUSTRY_LOADED && !INDUSTRY_LOADING){ ensureIndustryLoaded(); }
 }
 
 // ======================= OMZET PER INDUSTRIE =======================
@@ -3792,6 +3802,23 @@ const IND_COLORS = {
 };
 const IND_FALLBACK = ['#0096D6','#59BBE4','#F59E0B','#A78BFA','#22C55E','#EF4444','#EAB308','#14B8A6'];
 function indColor(name, i){ return IND_COLORS[name] || IND_FALLBACK[i % IND_FALLBACK.length]; }
+
+// Kleine kleurhelpers voor de per-sector omzetgrafieken (zelfde #RRGGBB-sectorkleuren
+// als de filterbalk-chips/sector-stip, alleen als rgba/lichtere tint nodig voor de
+// chart-fill resp. de 'YTD this year'-lijn).
+function rcHexToRgba(hex, a){
+  const h = String(hex||'#0096D6').replace('#','');
+  const n = parseInt(h.length===3 ? h.split('').map(c=>c+c).join('') : h, 16);
+  const r=(n>>16)&255, g=(n>>8)&255, b=n&255;
+  return 'rgba('+r+','+g+','+b+','+a+')';
+}
+function rcLighten(hex, amt){
+  const h = String(hex||'#0096D6').replace('#','');
+  const n = parseInt(h.length===3 ? h.split('').map(c=>c+c).join('') : h, 16);
+  let r=(n>>16)&255, g=(n>>8)&255, b=n&255;
+  r=Math.round(r+(255-r)*amt); g=Math.round(g+(255-g)*amt); b=Math.round(b+(255-b)*amt);
+  return 'rgb('+r+','+g+','+b+')';
+}
 
 function loadIndustryCache(){
   if(INDUSTRY_MAP) return INDUSTRY_MAP;
@@ -3878,6 +3905,146 @@ function computeIndustryAgg(){
   return agg;
 }
 
+// ======================= OMZET PER SECTOR (Overzicht-tab) =======================
+// Op verzoek van Floris (2026-10-01/02): dezelfde "Omzet (intake)"-grafiek (jaaromzet ·
+// YTD · prognose gestippeld) als hierboven, nu één per sector. Hergebruikt bewust de
+// bestaande prognose-engine (ovFullCurrentEst/ovForecastBase/ovGrowth/ovForecast) door
+// een eigen {getTotal,getYtd}-"def" per sector te voeden en een metricName die NOOIT
+// 'revenue'/'orders'/'avg' is — zo slaat geen van de bedrijfsbrede specialgevallen
+// (DATA.year_forecast-shortcut, avg-samenstelling) per ongeluk toe op sectorcijfers.
+// Respecteert dezelfde globale knoppen als de 4 charts erboven: jaartoggles
+// (activeYears) en de Prognose-knoppen (OV_FC/OV_CUR).
+function renderSectorCharts(){
+  const grid = document.getElementById('sectorChartsGrid');
+  if(!grid) return;
+  const map = (typeof loadIndustryCache==='function') ? loadIndustryCache() : null;
+  if(!map || !Object.keys(map).length){
+    grid.innerHTML = '<div class="empty" style="grid-column:1/-1">Sectordata laden&hellip; (eenmalig, op de achtergrond)</div>';
+    return;
+  }
+  const agg = computeIndustryAgg();
+  const cur = DATA.current_year;
+  const yearsSet = new Set();
+  Object.values(agg).forEach(function(a){ Object.keys(a.full).forEach(function(y){ yearsSet.add(+y); }); Object.keys(a.ytd).forEach(function(y){ yearsSet.add(+y); }); });
+  if(cur) yearsSet.add(cur);
+  const allYears = Array.from(yearsSet).sort(function(a,b){return a-b;});
+  const years = allYears.filter(function(y){ return activeYears.has(y); });
+  // Sectoren zonder betekenisvolle omzet (Onbekend/Particulier, zie HIDDEN_SECTORS
+  // elders) en sectoren zonder enige omzet in de getoonde jaren overslaan.
+  const names = Object.keys(agg).filter(function(n){
+    if(n==='Onbekend' || n==='Particulier') return false;
+    return years.some(function(y){ return (agg[n].full[y]||0) > 0; });
+  }).sort(function(a,b){
+    const ta = years.reduce(function(s,y){ return s+((agg[a].full[y])||0); },0);
+    const tb = years.reduce(function(s,y){ return s+((agg[b].full[y])||0); },0);
+    return tb-ta;
+  });
+  if(!years.length || !names.length){
+    grid.innerHTML = '<div class="empty" style="grid-column:1/-1">Nog geen sector-omzet voor de getoonde jaren.</div>';
+    return;
+  }
+  grid.innerHTML = names.map(function(n, idx){
+    const col = indColor(n, idx);
+    return '<div class="chart-box" style="margin-bottom:0;border-left:3px solid '+col+'">'+
+      '<div class="chart-title"><span>Omzet (intake) &middot; '+n+'</span><span class="sub">Jaaromzet &middot; YTD &middot; YTD change vs vorig jaar</span></div>'+
+      '<div class="chart-canvas-wrap tall"><canvas id="sectorChart'+idx+'"></canvas></div>'+
+      '<div id="sectorChart'+idx+'Row" style="display:flex;justify-content:space-around;padding:6px 24px 14px;font-size:12px;color:var(--ink3);font-weight:500;letter-spacing:.02em"></div>'+
+    '</div>';
+  }).join('');
+  names.forEach(function(n, idx){ renderOneSectorChart(n, idx, agg, years); });
+}
+
+function renderOneSectorChart(name, idx, agg, years){
+  const canvasId = 'sectorChart'+idx, rowId = 'sectorChart'+idx+'Row', chartKey = 'sector_'+idx;
+  const canvas = document.getElementById(canvasId);
+  if(!canvas) return;
+  if(charts[chartKey]){ charts[chartKey].destroy(); charts[chartKey] = null; }
+  const a = agg[name] || {full:{}, ytd:{}};
+  const def = { getTotal: function(y){ return a.full[y]||0; }, getYtd: function(y){ return a.ytd[y]||0; } };
+  const metricKey = 'sector_'+name;   // bewust géén 'revenue'/'orders'/'avg', zie opmerking hierboven
+  const labels = years.map(String);
+  const totals = years.map(def.getTotal);
+  const ytds = years.map(def.getYtd);
+  const growths = years.map(function(y){
+    const curv = def.getYtd(y), prev = def.getYtd(y-1);
+    if(!curv || !prev) return null;
+    return ((curv-prev)/prev)*100;
+  });
+  const cur = DATA.current_year;
+  const curIdx = years.indexOf(cur);
+  const showCur = (typeof OV_CUR!=='undefined' && OV_CUR && curIdx>=0);
+  const fc = (typeof OV_FC!=='undefined' && OV_FC>0) ? ovForecast(metricKey, def, cur) : [];
+  const lastRealIdx = years.length-1;
+  const projFrom = showCur ? curIdx : lastRealIdx;
+  const totalsBase = totals.slice();
+  if(showCur) totalsBase[curIdx] = ovCurrentFull(metricKey, def, cur);
+  const labelsX = labels.concat(fc.map(function(v,k){ return String(cur+1+k); }));
+  const totalsX = totalsBase.concat(fc);
+  const ytdsX = ytds.concat(fc.map(function(){ return null; }));
+  const color = indColor(name, idx);
+  const ytdColor = rcLighten(color, .35);
+
+  const labelPlugin = {
+    id: chartKey+'Labels',
+    afterDatasetsDraw(chart){
+      const {ctx} = chart;
+      ctx.save(); ctx.font = '600 12px Roboto'; ctx.textAlign = 'center';
+      chart.data.datasets.forEach(function(ds, dsIdx){
+        const meta = chart.getDatasetMeta(dsIdx);
+        meta.data.forEach(function(pt, i){
+          const v = ds.data[i]; if(v==null) return;
+          ctx.fillStyle = ds.borderColor;
+          const yOff = dsIdx===0 ? -10 : 18;
+          ctx.fillText(fmtEurShort(v), pt.x, pt.y+yOff);
+        });
+      });
+      ctx.restore();
+    }
+  };
+
+  charts[chartKey] = new Chart(canvas, {
+    type: 'line',
+    data: {
+      labels: labelsX,
+      datasets: [
+        { label:'Jaaromzet', data: totalsX, borderColor: color, backgroundColor: rcHexToRgba(color,.18), tension:.35, fill:'+1', pointRadius:6, pointHoverRadius:8, pointBackgroundColor: color, borderWidth:2.5, segment:{ borderDash: function(ctx){ return ctx.p0DataIndex>=projFrom ? [6,4] : undefined; } } },
+        { label:'YTD this year', data: ytdsX, borderColor: ytdColor, backgroundColor: rcHexToRgba(color,.12), tension:.35, fill:'origin', pointRadius:6, pointHoverRadius:8, pointBackgroundColor: ytdColor, borderWidth:2.5 }
+      ]
+    },
+    options: Object.assign({}, CD, {
+      layout: { padding: { top:24, bottom:8, left:12, right:12 } },
+      plugins: Object.assign({}, CD.plugins, {
+        legend: { display:true, position:'top', align:'start', labels:{color:'#CFD2D3', font:{size:11, family:'Roboto'}, boxWidth:14, padding:14 } },
+        tooltip: { callbacks: {
+          label: ctx => ctx.dataset.label + ': € ' + Math.round(ctx.parsed.y||0).toLocaleString('nl-NL'),
+          afterLabel: ctx => {
+            if(ctx.datasetIndex===1 && growths[ctx.dataIndex]!==null){
+              const g = growths[ctx.dataIndex];
+              return 'YTD change vs vorig jaar: ' + (g>=0?'+':'') + g.toFixed(1) + '%';
+            }
+            return null;
+          }
+        } }
+      }),
+      scales: {
+        x: Object.assign({}, CD.scales.x, { ticks: Object.assign({}, CD.scales.x.ticks, { font:{size:13,weight:'600'} }) }),
+        y: Object.assign({}, CD.scales.y, { beginAtZero:true, ticks: Object.assign({}, CD.scales.y.ticks, { callback:function(v){ return fmtEurShort(v); } }) })
+      }
+    }),
+    plugins: [labelPlugin]
+  });
+
+  const row = document.getElementById(rowId);
+  if(row){
+    row.innerHTML = years.map(function(y,i){
+      const g = growths[i];
+      if(g===null) return '<div style="color:var(--ink4);font-size:11px"><span style="font-weight:700;color:var(--ink2)">'+y+'</span></div>';
+      const c2 = g>=0 ? '#42c65c' : '#EF4444';
+      return '<div style="text-align:center"><span style="color:'+c2+';font-weight:800;font-size:14px">'+(g>=0?'+':'')+g.toFixed(0)+'%</span><div style="font-size:11px;color:var(--ink4);margin-top:1px">YTD vs '+(y-1)+'</div></div>';
+    }).join('');
+  }
+}
+
 function showIndProgress(done,total){
   const box=document.getElementById('indProgress'), body=document.getElementById('indBody');
   if(box) box.style.display='block';
@@ -3896,7 +4063,7 @@ async function ensureIndustryLoaded(){
   document.querySelectorAll('#tab-industrie .ind-yr').forEach(function(e){ e.textContent=DATA.current_year||''; });
   if(INDUSTRY_LOADING) return;
   const missing=uniqueCustomerIds().filter(function(id){ return !(id in INDUSTRY_MAP); });
-  if(missing.length===0){ INDUSTRY_LOADED=true; hideIndProgress(); renderIndustry(); renderGlobalFilterBar(); return; }
+  if(missing.length===0){ INDUSTRY_LOADED=true; hideIndProgress(); renderIndustry(); renderGlobalFilterBar(); if(typeof renderSectorCharts==='function') renderSectorCharts(); return; }
   INDUSTRY_LOADING=true;
   showIndProgress(0, missing.length);
   try{ await amfgFetchIndustries(function(done,total){ showIndProgress(done,total); }); }
@@ -3905,6 +4072,7 @@ async function ensureIndustryLoaded(){
   hideIndProgress();
   renderIndustry();
   renderGlobalFilterBar();   // filterbalk verversen: sectoren zonder orders vallen nu weg / erbij
+  if(typeof renderSectorCharts==='function') renderSectorCharts();
 }
 
 // Handmatig verversen: cache legen en opnieuw ophalen (gebruikt dezelfde overlay als
