@@ -1086,10 +1086,13 @@ function renderThisMonth(){
   document.getElementById('yearHeroCells').innerHTML = cells.join('');
   document.getElementById('monthKpiGrid').innerHTML =
     '<div class="kpi"><div class="kpi-label">Omzet '+MONTHS_FULL[idx].toLowerCase()+' '+yr+'</div><div class="kpi-value">'+fmtEur(curRev)+deltaTag(curRev,sameMonthPrevRev)+'</div><div class="kpi-sub">vs '+fmtEur(sameMonthPrevRev)+' '+(yr-1)+' (volledig)</div></div>'+
-    '<div class="kpi"><div class="kpi-label">Aantal orders</div><div class="kpi-value">'+fmtNum(curOrd)+deltaTag(curOrd,sameMonthPrevOrd)+'</div><div class="kpi-sub">vs '+fmtNum(sameMonthPrevOrd)+' '+(yr-1)+'</div></div>'+
-    '<div class="kpi"><div class="kpi-label">Unieke klanten</div><div class="kpi-value">'+fmtNum(curCli)+deltaTag(curCli,sameMonthPrevCli)+'</div><div class="kpi-sub">vs '+fmtNum(sameMonthPrevCli)+' '+(yr-1)+'</div></div>'+
-    '<div class="kpi"><div class="kpi-label">Gem. orderwaarde</div><div class="kpi-value">'+fmtEur(curAvg)+deltaTag(curAvg,sameMonthPrevAvg)+'</div><div class="kpi-sub">vs '+fmtEur(sameMonthPrevAvg)+' '+(yr-1)+'</div></div>'+
-    '<div class="kpi"><div class="kpi-label">vs vorige maand</div><div class="kpi-value">'+fmtEurShort(curRev)+deltaTag(curRev,prevMonthRev)+'</div><div class="kpi-sub">vs '+fmtEurShort(prevMonthRev)+' vorige maand</div></div>'+
+    // Tegels 2-5 tonen sinds 2026-10-06 het HELE JAAR (YTD t/m vandaag vs zelfde periode vorig jaar),
+    // niet de lopende maand — geeft op verzoek van Floris een rustiger beeld over een langere periode.
+    // Omzet-maand en maand-projectie (eerste/laatste tegel) blijven bewust maandgebonden.
+    '<div class="kpi"><div class="kpi-label">Aantal orders YTD</div><div class="kpi-value">'+fmtNum(cYTD.total_orders||0)+deltaTag(cYTD.total_orders||0,pYTD.total_orders||0)+'</div><div class="kpi-sub">vs '+fmtNum(pYTD.total_orders||0)+' '+(yr-1)+' YTD</div></div>'+
+    '<div class="kpi"><div class="kpi-label">Unieke klanten YTD</div><div class="kpi-value">'+fmtNum(cYTD.unique_clients||0)+deltaTag(cYTD.unique_clients||0,pYTD.unique_clients||0)+'</div><div class="kpi-sub">vs '+fmtNum(pYTD.unique_clients||0)+' '+(yr-1)+' YTD</div></div>'+
+    '<div class="kpi"><div class="kpi-label">Gem. orderwaarde YTD</div><div class="kpi-value">'+fmtEur(cYTD.avg_order||0)+deltaTag(cYTD.avg_order||0,pYTD.avg_order||0)+'</div><div class="kpi-sub">vs '+fmtEur(pYTD.avg_order||0)+' '+(yr-1)+' YTD</div></div>'+
+    '<div class="kpi"><div class="kpi-label">Omzet YTD</div><div class="kpi-value">'+fmtEurShort(cYTD.total_revenue||0)+deltaTag(cYTD.total_revenue||0,pYTD.total_revenue||0)+'</div><div class="kpi-sub">vs '+fmtEurShort(pYTD.total_revenue||0)+' '+(yr-1)+' YTD</div></div>'+
     (function(){
       const monthTarget = (DATA.month_target || 240000);
       const onOrAbove = projRev >= monthTarget;
