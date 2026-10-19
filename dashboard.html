@@ -1998,13 +1998,46 @@ function renderClientsAbcChart(){
     return c;
   };
 
+  // Per-jaar-status ("wie was A in dat jaar"): dezelfde regel als de labels "nieuw" / "was B" in de
+  // ABC-lijst (classInYear in renderClients) — A = >=4 actieve maanden én omzet > A/B-drempel, B = >=4
+  // maanden, C = <4 maanden — maar nu berekend over de periode van de bar zelf: 'Jaar'-bar = alle 12
+  // maanden van dat jaar, 'YTD'-bar = jan t/m DATA.ytd_month. Zo telt een klant die in 2025 groot was
+  // en nu weg is, in de 2025-balk als A (niet meer als C o.b.v. de status van vandaag).
+  // Valt terug op de huidige status (DATA.account_status) als de order-detaildata ontbreekt.
+  const abThrBars = (typeof CURRENT_AB_THRESHOLD !== 'undefined') ? CURRENT_AB_THRESHOLD : 10000;
+  const allOrdBars = DATA.all_orders || [];
+  const ytdMonthBars = DATA.ytd_month || 12;
+  const classMapCache = {};
+  function classMapFor(y, maxMonth){
+    const ck = y+'|'+maxMonth;
+    if(classMapCache[ck]) return classMapCache[ck];
+    const agg = {};
+    allOrdBars.forEach(o => {
+      if(o.y !== y || o.m > maxMonth) return;
+      const e = agg[o.client] || (agg[o.client] = {rev:0, months:{}});
+      e.rev += o.rev; e.months[o.m] = 1;
+    });
+    const map = {};
+    Object.keys(agg).forEach(k => {
+      const e = agg[k], n = Object.keys(e.months).length;
+      map[k] = (n>=4 && e.rev>abThrBars) ? 'A' : (n>=4 ? 'B' : 'C');
+    });
+    return (classMapCache[ck] = map);
+  }
+  const countAbcYear = (clients, y, maxMonth) => {
+    if(!allOrdBars.length) return countAbc(clients);
+    const map = classMapFor(y, maxMonth);
+    const c = {A:0, B:0, C:0};
+    (clients || []).forEach(n => { c[map[n] || 'C']++; });
+    return c;
+  };
   const fullCounts = years.map(y => {
     const list = (DATA.clients_by_year && DATA.clients_by_year.full && DATA.clients_by_year.full[y]) || [];
-    return countAbc(list);
+    return countAbcYear(list, y, 12);
   });
   const ytdCounts = years.map(y => {
     const list = (DATA.clients_by_year && DATA.clients_by_year.ytd && DATA.clients_by_year.ytd[y]) || [];
-    return countAbc(list);
+    return countAbcYear(list, y, ytdMonthBars);
   });
   // Huidig jaar: full = YTD (jaar nog open)
   years.forEach((y, i) => {
@@ -3169,7 +3202,8 @@ function processExcelData(rows, fileName){
 
   // Bereken account status A/B/C per klant (afgelopen 6 maanden, NET, niet-cancelled)
   // CANONIEKE REGEL: RC Source data lib\definities en regels\ABC_accounts_definitie.md (leidend).
-  // LET OP: die definitie (v1.1) schrijft naam-normalisatie voor (rechtsvormen afstrippen); nog niet toegepast hier.
+  // Naam-normalisatie (rechtsvormen/schrijfwijzen) is bovenaan processExcelData() al toegepast; Xometry-entiteiten
+  // worden daar nog NIET onder één "Xometry" samengevoegd zoals de definitie voorschrijft (open punt).
   const accountStatus = {};
   const clientMonths = {};
   const clientRev6m = {};
