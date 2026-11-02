@@ -112,6 +112,7 @@
   .global-filter .gf-acc-group{display:flex;gap:4px}
   .global-filter .gf-acc{background:transparent;border:1px solid var(--border-2);color:var(--ink-2);border-radius:999px;padding:4px 12px;font:700 11px 'Roboto';cursor:pointer}
   .global-filter .gf-acc.active{background:var(--rc-blue);border-color:var(--rc-blue);color:#fff}
+  .global-filter .gf-acc small{font-weight:500;opacity:.85;margin-left:5px;font-size:10px}
   .global-filter .gf-sep{width:1px;height:20px;background:var(--border-2);margin:0 4px}
   .global-filter .gf-chips{display:flex;flex-wrap:wrap;gap:5px}
   .global-filter .gf-chip{display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.05);border:1px solid var(--rc-blue);color:var(--ink);border-radius:999px;padding:3px 10px;font:600 11px 'Roboto';cursor:pointer}
@@ -962,7 +963,8 @@ function renderThisMonth(){
   const projConfidence = wdTotal > 0 ? (wdElapsed / wdTotal) : 0;
   // === Year hero ===
   document.getElementById('yearHeroTitle').textContent = String(yr);
-  document.getElementById('yearHeroSub').textContent = 'Tot '+dayOf+' '+MONTHS_FULL[idx].toLowerCase()+' '+yr;
+  const cv = !!(DATA.view_closed && DATA.view_year === yr);   // jaar-weergave van een afgesloten jaar
+  document.getElementById('yearHeroSub').textContent = cv ? ('Heel jaar '+yr+' · afgesloten') : ('Tot '+dayOf+' '+MONTHS_FULL[idx].toLowerCase()+' '+yr);
   const cYTD = DATA.years[yr];
   const pYTD = DATA.years[yr-1] || {total_revenue:0,total_orders:0,avg_order:0,monthly_revenue:Array(12).fill(0)};
   const pFull = DATA.full[yr-1] || {monthly_revenue:Array(12).fill(0)};
@@ -1083,17 +1085,17 @@ function renderThisMonth(){
     const targetDisplay = '€'+Math.round(target/1000).toLocaleString('nl-NL')+'K';
     targetHTML = '<div class="yh-target"><span class="yh-target-lbl">Target '+targetDisplay+'</span><span class="yh-target-delta '+gapCls+'">'+txt+'</span></div>';
   }
-  cells.push('<div class="yh-cell forecast"><div class="yh-cell-lbl">Prognose '+yr+'</div><div class="yh-cell-val">'+fcDisplay+'</div>'+makeDelta(fullYearFc,fullPrevTotal)+targetHTML+'</div>');
+  cells.push('<div class="yh-cell forecast"><div class="yh-cell-lbl">'+(cv?'Eindresultaat ':'Prognose ')+yr+'</div><div class="yh-cell-val">'+fcDisplay+'</div>'+makeDelta(fullYearFc,fullPrevTotal)+targetHTML+'</div>');
   document.getElementById('yearHeroCells').innerHTML = cells.join('');
   document.getElementById('monthKpiGrid').innerHTML =
     '<div class="kpi"><div class="kpi-label">Omzet '+MONTHS_FULL[idx].toLowerCase()+' '+yr+'</div><div class="kpi-value">'+fmtEur(curRev)+deltaTag(curRev,sameMonthPrevRev)+'</div><div class="kpi-sub">vs '+fmtEur(sameMonthPrevRev)+' '+(yr-1)+' (volledig)</div></div>'+
     // Tegels 2-5 tonen sinds 2026-10-06 het HELE JAAR (YTD t/m vandaag vs zelfde periode vorig jaar),
     // niet de lopende maand — geeft op verzoek van Floris een rustiger beeld over een langere periode.
     // Omzet-maand en maand-projectie (eerste/laatste tegel) blijven bewust maandgebonden.
-    '<div class="kpi"><div class="kpi-label">Aantal orders YTD</div><div class="kpi-value">'+fmtNum(cYTD.total_orders||0)+deltaTag(cYTD.total_orders||0,pYTD.total_orders||0)+'</div><div class="kpi-sub">vs '+fmtNum(pYTD.total_orders||0)+' '+(yr-1)+' YTD</div></div>'+
-    '<div class="kpi"><div class="kpi-label">Unieke klanten YTD</div><div class="kpi-value">'+fmtNum(cYTD.unique_clients||0)+deltaTag(cYTD.unique_clients||0,pYTD.unique_clients||0)+'</div><div class="kpi-sub">vs '+fmtNum(pYTD.unique_clients||0)+' '+(yr-1)+' YTD</div></div>'+
-    '<div class="kpi"><div class="kpi-label">Gem. orderwaarde YTD</div><div class="kpi-value">'+fmtEur(cYTD.avg_order||0)+deltaTag(cYTD.avg_order||0,pYTD.avg_order||0)+'</div><div class="kpi-sub">vs '+fmtEur(pYTD.avg_order||0)+' '+(yr-1)+' YTD</div></div>'+
-    '<div class="kpi"><div class="kpi-label">Omzet YTD</div><div class="kpi-value">'+fmtEurShort(cYTD.total_revenue||0)+deltaTag(cYTD.total_revenue||0,pYTD.total_revenue||0)+'</div><div class="kpi-sub">vs '+fmtEurShort(pYTD.total_revenue||0)+' '+(yr-1)+' YTD</div></div>'+
+    '<div class="kpi"><div class="kpi-label">Aantal orders'+(cv?' '+yr:' YTD')+'</div><div class="kpi-value">'+fmtNum(cYTD.total_orders||0)+deltaTag(cYTD.total_orders||0,pYTD.total_orders||0)+'</div><div class="kpi-sub">vs '+fmtNum(pYTD.total_orders||0)+' '+(yr-1)+(cv?'':' YTD')+'</div></div>'+
+    '<div class="kpi"><div class="kpi-label">Unieke klanten'+(cv?' '+yr:' YTD')+'</div><div class="kpi-value">'+fmtNum(cYTD.unique_clients||0)+deltaTag(cYTD.unique_clients||0,pYTD.unique_clients||0)+'</div><div class="kpi-sub">vs '+fmtNum(pYTD.unique_clients||0)+' '+(yr-1)+(cv?'':' YTD')+'</div></div>'+
+    '<div class="kpi"><div class="kpi-label">Gem. orderwaarde'+(cv?' '+yr:' YTD')+'</div><div class="kpi-value">'+fmtEur(cYTD.avg_order||0)+deltaTag(cYTD.avg_order||0,pYTD.avg_order||0)+'</div><div class="kpi-sub">vs '+fmtEur(pYTD.avg_order||0)+' '+(yr-1)+(cv?'':' YTD')+'</div></div>'+
+    '<div class="kpi"><div class="kpi-label">Omzet'+(cv?' '+yr:' YTD')+'</div><div class="kpi-value">'+fmtEurShort(cYTD.total_revenue||0)+deltaTag(cYTD.total_revenue||0,pYTD.total_revenue||0)+'</div><div class="kpi-sub">vs '+fmtEurShort(pYTD.total_revenue||0)+' '+(yr-1)+(cv?'':' YTD')+'</div></div>'+
     (function(){
       const monthTarget = (DATA.month_target || 240000);
       const onOrAbove = projRev >= monthTarget;
@@ -1125,7 +1127,7 @@ function renderThisMonth(){
     document.getElementById('monthTopTotal').innerHTML = list.length + ' orders &middot; ' + fmtEur(sum) + ' &middot; <span class="pl-clear" onclick="clearPipelineFilter()" title="Wis selectie">&times; wissen</span>';
   } else {
     const sum = yearAll.reduce(function(a,o){ return a + (o.gross||o.revenue||0); }, 0);
-    document.getElementById('monthTopHeader').textContent = 'Orders dit jaar';
+    document.getElementById('monthTopHeader').textContent = cv ? ('Orders '+yr) : 'Orders dit jaar';
     document.getElementById('monthTopTotal').innerHTML = yearAll.length + ' orders &middot; ' + fmtEur(sum);
   }
   if(list.length===0){
@@ -2611,15 +2613,45 @@ function processWithFilter(rows, fileName){
   LAST_FILENAME = fileName;
   reapplyFilters();
 }
+// === Jaarkeuze (filterbalk "Jaar"): het hele dashboard schakelt om naar een afgesloten jaar ===
+// YEAR_VIEW = null → lopend jaar (nieuwste jaar in de data), precies zoals het dashboard altijd werkte.
+// YEAR_VIEW = 2025 → alle orders ná 2025 worden buiten beschouwing gelaten, waardoor 2025 het "huidige"
+// jaar wordt (heel jaar, vergeleken met 2024; A/B/C gemeten per einde 2025). Onderdelen die van nature
+// "vandaag" zijn (werkstroom/pipeline, nog te factureren) blijven LIVE: die lezen ALL_ROWS / LIVE_PIPE_ROWS.
+let YEAR_VIEW = null;
+let LIVE_PIPE_ROWS = null;    // alleen gezet in jaar-weergave: ongefilterd-op-jaar rijen voor werkstroom-strook
+function rowYear(r){ const d=r['ORDER DATE']; const dt=(d instanceof Date)?d:new Date(d); return dt.getFullYear(); }
+let _dataYearsCache = {src:null, len:-1, years:[]};
+function dataYears(){
+  if(!ALL_ROWS) return [];
+  if(_dataYearsCache.src===ALL_ROWS && _dataYearsCache.len===ALL_ROWS.length) return _dataYearsCache.years;
+  const s = new Set();
+  ALL_ROWS.forEach(function(r){ const y=rowYear(r); if(!isNaN(y)) s.add(y); });
+  const years = Array.from(s).sort(function(a,b){ return a-b; });
+  _dataYearsCache = {src:ALL_ROWS, len:ALL_ROWS.length, years:years};
+  return years;
+}
+function setYearView(y){
+  const ys = dataYears(); if(!ys.length) return;
+  const latest = ys[ys.length-1];
+  YEAR_VIEW = (!y || y>=latest) ? null : y;   // nieuwste jaar = "lopend jaar" = standaard
+  reapplyFilters();
+  renderGlobalFilterBar();
+}
 function reapplyFilters(){
   if(!ALL_ROWS) return;
+  // Basis = alle rijen, of (jaar-weergave) alleen rijen t/m het gekozen jaar
+  const base = YEAR_VIEW ? ALL_ROWS.filter(function(r){ return rowYear(r) <= YEAR_VIEW; }) : ALL_ROWS;
   // 1) volledige dataset -> bepaalt de A/B/C-classificatie (account_status)
-  processExcelData(ALL_ROWS, LAST_FILENAME);
+  LIVE_PIPE_ROWS = YEAR_VIEW ? ALL_ROWS : null;
+  processExcelData(base, LAST_FILENAME);
   FULL_ACCOUNT_STATUS = Object.assign({}, DATA.account_status);
   // 2) als er een filter actief is: opnieuw verwerken op de gefilterde subset
   if(CLIENT_FILTER || ACCOUNT_FILTER || INDUSTRY_SEL.length){
-    processExcelData(applyActiveRowFilters(ALL_ROWS), LAST_FILENAME);
+    LIVE_PIPE_ROWS = YEAR_VIEW ? applyActiveRowFilters(ALL_ROWS) : null;
+    processExcelData(applyActiveRowFilters(base), LAST_FILENAME);
   }
+  LIVE_PIPE_ROWS = null;
   renderFilterBar();
 }
 function applyClientFilter(name){
@@ -2738,7 +2770,19 @@ function renderGlobalFilterBar(){
   const accBtn=function(k,lbl){ const act=(k==='all')? !ACCOUNT_FILTER : (ACCOUNT_FILTER===k); return '<button type="button" class="gf-acc'+(act?' active':'')+'" onclick="setGlobalAcc(\''+k+'\')">'+lbl+'</button>'; };
   let html='<span class="gf-lbl">Filter</span>'+
     '<span class="gf-acc-group">'+accBtn('all','Alle')+accBtn('A','A')+accBtn('B','B')+accBtn('C','C')+'</span>'+
-    '<span class="gf-sep"></span><span class="gf-chips">';
+    '<span class="gf-sep"></span>';
+  // Jaarknoppen: hele dashboard schakelt naar het gekozen (afgesloten) jaar; nieuwste jaar = "lopend jaar" (standaard).
+  const _ys = dataYears();
+  if(_ys.length>=2){
+    const _latest = _ys[_ys.length-1];
+    html+='<span class="gf-lbl">Jaar</span><span class="gf-acc-group">';
+    _ys.forEach(function(y){
+      const act = (y===_latest) ? !YEAR_VIEW : (YEAR_VIEW===y);
+      html+='<button type="button" class="gf-acc gf-yr'+(act?' active':'')+'" onclick="setYearView('+y+')" title="'+(y===_latest?'Lopend jaar (standaard)':'Hele dashboard naar heel '+y)+'">'+y+(y===_latest?'<small>lopend jaar</small>':'')+'</button>';
+    });
+    html+='</span><span class="gf-sep"></span>';
+  }
+  html+='<span class="gf-chips">';
   // "Alle sectoren"-chip
   html+='<button type="button" class="gf-chip gf-all'+(!INDUSTRY_SEL.length?' active':'')+'" onclick="setGlobalSectorAll()">Alle sectoren</button>';
   // Alleen sectoren MET orders tonen (zodra de industrie-cache geladen is). Is de cache nog
@@ -2943,12 +2987,16 @@ function processExcelData(rows, fileName){
     return {date:dt, year:dt.getFullYear(), month:dt.getMonth()+1, client:String(r['BILLING COMPANY']||'Onbekend').trim(), revenue:parseFloat(r['TOTAL NET PRICE'])||0};
   }).filter(r => !isNaN(r.year));
   const allYears = Array.from(new Set(cleaned.map(r=>r.year))).sort((a,b)=>b-a);
-  const currYear = allYears.length ? allYears[0] : new Date().getFullYear();
+  // Jaar-weergave (YEAR_VIEW): rijen zijn dan al tot en met dat jaar afgekapt, dus currYear = dat jaar.
+  // Een afgesloten jaar is volledig → cutoff 12 (geen YTD-afkapping, geen prognose-maanden).
+  const closedView = !!(typeof YEAR_VIEW!=='undefined' && YEAR_VIEW);
+  const currYear = closedView ? YEAR_VIEW : (allYears.length ? allYears[0] : new Date().getFullYear());
   const prevYear = currYear-1, prevPrevYear = currYear-2;
   // Let op: bij een LEGE (gefilterde) subset is deze lijst leeg → Math.max([]) = -Infinity.
   // Dat maakte DATA.ytd_month = -Infinity en liet een while-lus elders eeuwig draaien (freeze).
   const _curMonths = cleaned.filter(r=>r.year===currYear).map(r=>r.month);
-  const cutoff = _curMonths.length ? Math.max.apply(null, _curMonths) : (new Date().getMonth()+1);
+  const cutoff = closedView ? 12 : (_curMonths.length ? Math.max.apply(null, _curMonths) : (new Date().getMonth()+1));
+  DATA.view_closed = closedView; DATA.view_year = closedView ? currYear : null;
   function yearStats(yr, ytd){
     let d = cleaned.filter(r=>r.year===yr);
     if(ytd) d = d.filter(r=>r.month<=ytd);
@@ -2986,10 +3034,10 @@ function processExcelData(rows, fileName){
     return Math.floor((d.getTime() - start.getTime()) / 86400000);
   }
   // cutoffDOY = laatste order datum in current year (= "vandaag" in de data)
-  const latestCurrDate = cleaned
+  const latestCurrDate = closedView ? new Date(currYear, 11, 31, 12) : cleaned
     .filter(r => r.year === currYear && r.date instanceof Date)
     .reduce((m, r) => (!m || r.date > m) ? r.date : m, null);
-  const cutoffDOY = latestCurrDate ? dayOfYear(latestCurrDate) : dayOfYear(new Date());
+  const cutoffDOY = closedView ? 366 : (latestCurrDate ? dayOfYear(latestCurrDate) : dayOfYear(new Date()));
   DATA.ytd_day_of_year = cutoffDOY;
   DATA.ytd_cutoff_date = latestCurrDate ? latestCurrDate.toISOString().slice(0,10) : null;
   DATA.ytd_by_day = {};
@@ -3105,6 +3153,7 @@ function processExcelData(rows, fileName){
   const topMonth = Object.values(monthAgg).sort((a,b)=>b.revenue-a.revenue).slice(0,10);
   let lastDate = null;
   thisMonthRows.forEach(r=>{ if(!lastDate || r.date>lastDate) lastDate = r.date; });
+  if(closedView) lastDate = new Date(currYear, cutoff, 0, 12);   // 31 december van het gekozen jaar
   if(!lastDate) lastDate = new Date();
   const daysInMonth = new Date(lastDate.getFullYear(), lastDate.getMonth()+1, 0).getDate();
   DATA.this_month = {top_clients:topMonth, day_of_month:lastDate.getDate(), days_in_month:daysInMonth, last_order_date:lastDate.toISOString().slice(0,10)};
@@ -3162,7 +3211,7 @@ function processExcelData(rows, fileName){
   // Volledige (ongecapte) set orders per werkstroom-fase — voor de klikbare strook.
   // Zelfde fase-filter als de strip (pipelineStageOf), géén 200-cap en géén net>0-eis,
   // zodat een klik op een tegel exact dezelfde orders toont als de strip telt.
-  const pipelineOrders = rows.filter(function(r){
+  const pipelineOrders = (LIVE_PIPE_ROWS || rows).filter(function(r){
     return pipelineStageOf(String(r['TICKET STATUS']||''));
   }).map(function(r){
     let dt = r['ORDER DATE'];
@@ -3469,7 +3518,7 @@ function processExcelData(rows, fileName){
   }
 
   // Werkstroom-strook: aggregeer open orders per fase (op ruwe rows)
-  DATA.pipeline = computePipeline(rows);
+  DATA.pipeline = computePipeline(LIVE_PIPE_ROWS || rows);
 
   document.getElementById('fileNameLbl').textContent = 'Bron: '+fileName;
   document.getElementById('updateInfo').textContent = fmtLastUpdated(new Date());
