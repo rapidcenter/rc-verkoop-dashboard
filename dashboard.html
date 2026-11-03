@@ -1222,53 +1222,26 @@ function renderLast6Chart(){
       segC.push(ysrc ? (ysrc.monthly_revenue[i]||0) : 0);
     }
   }
-  // === Vorig jaar als uitgegrijsde staaf links van elke maand (A licht · B midden · C donker) ===
-  // Zelfde A/B/C-status als de gekleurde balken (DATA.account_status). Maanden vóór de lopende maand = hele
-  // maand vorig jaar; de lopende (nog niet afgesloten) maand = vorig jaar t/m dezelfde dag (dag-precies,
-  // net als de jaarbalken bovenin). Afgesloten jaar-weergave = alle 12 maanden volledig.
-  const ghostYear = yr-1;
-  const gA = new Array(m).fill(0), gB = new Array(m).fill(0), gC = new Array(m).fill(0);
+  // Omzet van dezelfde maand VORIG jaar, klein tussen haakjes onder het maandtotaal.
+  // Hele maanden vóór de lopende maand; de lopende (nog niet afgesloten) maand = vorig jaar t/m dezelfde dag
+  // (dag-precies, net als de jaarbalken bovenin). Afgesloten jaar-weergave: 12 volle maanden vs het jaar ervoor.
+  const prevYr = yr-1;
+  const prevMonthRev = new Array(m).fill(0);
   (function(){
-    const status = DATA.account_status || {};
     let dayLimit = 0;
     if(!DATA.view_closed && DATA.ytd_cutoff_date){ dayLimit = parseInt(String(DATA.ytd_cutoff_date).slice(8,10),10) || 0; }
-    (DATA.all_orders || []).forEach(function(o){
-      if(o.y !== ghostYear || o.m > m) return;
-      if(dayLimit && o.m === m && o.d > dayLimit) return;
-      const st = status[o.client] || 'C';
-      const i = o.m-1;
-      if(st === 'A') gA[i] += o.rev; else if(st === 'B') gB[i] += o.rev; else gC[i] += o.rev;
-    });
-  })();
-  const ghostTot = gA.map(function(_,i){ return gA[i]+gB[i]+gC[i]; });
-  const ghostHas = ghostTot.some(function(v){ return v>0; });
-  const ghostPlugin = {
-    id:'prevYearGhost',
-    beforeDatasetsDraw: function(chart){
-      if(!ghostHas) return;
-      const ctx = chart.ctx, ys = chart.scales.y, ca = chart.chartArea, meta = chart.getDatasetMeta(0);
-      if(!ys || !meta) return;
-      ctx.save();
-      const cols = ['#A9B7C6','#74879B','#4A5F75'];   // A, B, C — licht naar donker
-      const parts = [gA, gB, gC];
-      meta.data.forEach(function(el, idx){
-        if(!el || !(ghostTot[idx]>0)) return;
-        const bw = el.width || 40;
-        const gw = Math.max(8, Math.round(bw*0.24));
-        const x = Math.max(ca.left, el.x - bw/2 - gw);   // strak tegen de balk van dit jaar
-        let acc = 0;
-        parts.forEach(function(arr, k){
-          const v = arr[idx]; if(!(v>0)) return;
-          const yTop = ys.getPixelForValue(acc+v), yBot = ys.getPixelForValue(acc);
-          ctx.globalAlpha = .85;
-          ctx.fillStyle = cols[k];
-          ctx.fillRect(x, yTop, gw, yBot-yTop);
-          acc += v;
-        });
+    const ao = DATA.all_orders || [];
+    if(ao.length){
+      ao.forEach(function(o){
+        if(o.y !== prevYr || o.m > m) return;
+        if(dayLimit && o.m === m && o.d > dayLimit) return;
+        prevMonthRev[o.m-1] += o.rev;
       });
-      ctx.restore();
+    } else if(DATA.full && DATA.full[prevYr]){
+      for(let i=0;i<m;i++) prevMonthRev[i] = DATA.full[prevYr].monthly_revenue[i] || 0;
     }
-  };
+  })();
+  const hasPrevMonths = prevMonthRev.some(function(v){ return v>0; });
   // Custom plugin: toon totaalbedrag bovenop de gestapelde balk
   const totalsPlugin = {
     id:'totalLabels',
@@ -1393,7 +1366,17 @@ function renderLast6Chart(){
         if(tot<=0) return;
         const el = topMeta.data[idx];
         if(!el) return;
-        ctx.fillText(fmtEur(tot), el.x, el.y - 8);
+        if(hasPrevMonths){
+          // totaal iets hoger, daaronder klein en grijs (vorig jaar) tussen haakjes
+          ctx.fillText(fmtEur(tot), el.x, el.y - 23);
+          ctx.save();
+          ctx.font = "500 12px 'Roboto', sans-serif";
+          ctx.fillStyle = '#8FA3B8';
+          ctx.fillText('('+fmtEurShort(prevMonthRev[idx]||0)+')', el.x, el.y - 6);
+          ctx.restore();
+        } else {
+          ctx.fillText(fmtEur(tot), el.x, el.y - 8);
+        }
       });
       ctx.restore();
     }
@@ -1475,26 +1458,21 @@ function renderLast6Chart(){
   if(charts.last6) charts.last6.destroy();
   charts.last6 = new Chart(document.getElementById('chartLast6'), {
     type:'bar',
-    plugins:[ghostPlugin, totalsPlugin],
+    plugins:[totalsPlugin],
     data:{
       labels:labels,
       datasets:[
-        {label:'A accounts', data:segA, backgroundColor:'#16A34A', stack:'s', borderWidth:0, categoryPercentage:.92, barPercentage:.68},
-        {label:'B accounts', data:segB, backgroundColor:'#EA580C', stack:'s', borderWidth:0, categoryPercentage:.92, barPercentage:.68},
-        {label:'C accounts', data:segC, backgroundColor:'#87898B', stack:'s', borderWidth:0, categoryPercentage:.92, barPercentage:.68}
+        {label:'A accounts', data:segA, backgroundColor:'#16A34A', stack:'s', borderWidth:0},
+        {label:'B accounts', data:segB, backgroundColor:'#EA580C', stack:'s', borderWidth:0},
+        {label:'C accounts', data:segC, backgroundColor:'#87898B', stack:'s', borderWidth:0}
       ]
     },
     options: Object.assign({}, CD, {
-      layout:{padding:{top:24,left:8,right:8,bottom:0}},
-      plugins: Object.assign({}, CD.plugins, {legend:{display:true, position:'bottom', labels:{color:'#F4F7FB',font:{size:16,family:'Roboto',weight:'500'},boxWidth:14,boxHeight:14,padding:16,
-        generateLabels:function(chart){
-          const items = Chart.defaults.plugins.legend.labels.generateLabels(chart);
-          if(ghostHas) items.push({text:'Omzet '+ghostYear+' (A · B · C in grijstinten)', fillStyle:'#74879B', strokeStyle:'#74879B', lineWidth:0, hidden:false, fontColor:'#B6C3D1', ghost:true});
-          return items;
-        }}, onClick:function(e,item,legend){ if(item && item.ghost) return; Chart.defaults.plugins.legend.onClick.call(this,e,item,legend); }, onHover: handleLegendHover, onLeave: handleLegendLeave}}),
+      layout:{padding:{top:(hasPrevMonths?42:24),left:8,right:8,bottom:0}},
+      plugins: Object.assign({}, CD.plugins, {legend:{display:true, position:'bottom', labels:{color:'#F4F7FB',font:{size:16,family:'Roboto',weight:'500'},boxWidth:14,boxHeight:14,padding:16}, onHover: handleLegendHover, onLeave: handleLegendLeave}}),
       scales: {
         x: Object.assign({}, CD.scales.x, {stacked:true}),
-        y: Object.assign({}, CD.scales.y, {stacked:true, beginAtZero:true, suggestedMax: (ghostHas ? Math.max.apply(null, ghostTot)*1.08 : undefined), ticks: Object.assign({}, CD.scales.y.ticks, {callback:function(v){return fmtEurShort(v);}})})
+        y: Object.assign({}, CD.scales.y, {stacked:true, beginAtZero:true, ticks: Object.assign({}, CD.scales.y.ticks, {callback:function(v){return fmtEurShort(v);}})})
       }
     })
   });
