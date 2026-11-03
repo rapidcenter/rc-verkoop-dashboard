@@ -1222,19 +1222,15 @@ function renderLast6Chart(){
       segC.push(ysrc ? (ysrc.monthly_revenue[i]||0) : 0);
     }
   }
-  // Omzet van dezelfde maand VORIG jaar, klein tussen haakjes onder het maandtotaal.
-  // Hele maanden vóór de lopende maand; de lopende (nog niet afgesloten) maand = vorig jaar t/m dezelfde dag
-  // (dag-precies, net als de jaarbalken bovenin). Afgesloten jaar-weergave: 12 volle maanden vs het jaar ervoor.
+  // Omzet van dezelfde maand VORIG jaar (HELE maand, dus ook voor de lopende maand het volledige bedrag van vorig jaar),
+  // klein tussen haakjes onder het maandtotaal. Het maandtotaal kleurt groen als het hoger is dan dit bedrag.
   const prevYr = yr-1;
   const prevMonthRev = new Array(m).fill(0);
   (function(){
-    let dayLimit = 0;
-    if(!DATA.view_closed && DATA.ytd_cutoff_date){ dayLimit = parseInt(String(DATA.ytd_cutoff_date).slice(8,10),10) || 0; }
     const ao = DATA.all_orders || [];
     if(ao.length){
       ao.forEach(function(o){
         if(o.y !== prevYr || o.m > m) return;
-        if(dayLimit && o.m === m && o.d > dayLimit) return;
         prevMonthRev[o.m-1] += o.rev;
       });
     } else if(DATA.full && DATA.full[prevYr]){
@@ -1333,24 +1329,26 @@ function renderLast6Chart(){
           if(v<=0 || !el) return;
           const segH = Math.abs((el.base||0) - (el.y||0));
           if(segH < 26) return;
+          const yMid = ((el.base||0) + (el.y||0)) / 2;
+          ctx.fillStyle = '#FFFFFF';
+          ctx.textAlign = 'center';
+          if(acc !== 'A'){
+            // B en C: alleen de omzet
+            ctx.font = "700 15px 'Roboto', sans-serif";
+            ctx.fillText(fmtEurShort(v), el.x, yMid);
+            return;
+          }
+          // A: gecentreerd onder elkaar — omzet / percentage / (klanten, orders). Past het niet, dan vallen regels weg.
           const pct = monthTotals[idx]>0 ? Math.round(v/monthTotals[idx]*100)+'%' : '';
           const ym = xIndex2Ym[idx];
           const cnt = (DATA.account_breakdown && DATA.account_breakdown['monthly_count_'+ym.yy] && DATA.account_breakdown['monthly_count_'+ym.yy][acc] && DATA.account_breakdown['monthly_count_'+ym.yy][acc][ym.mm]) || {c:0,o:0};
-          const bold = fmtEurShort(v)+' · '+pct;
-          const light = ' ('+cnt.c+', '+cnt.o+')';
-          // Bereken totale breedte
-          ctx.font = "700 15px 'Roboto', sans-serif";
-          const wBold = ctx.measureText(bold).width;
-          ctx.font = "400 13px 'Roboto', sans-serif";
-          const wLight = ctx.measureText(light).width;
-          const totalW = wBold + wLight;
-          const yMid = ((el.base||0) + (el.y||0)) / 2;
-          const startX = el.x - totalW/2;
-          ctx.textAlign = 'left';
-          ctx.font = "700 15px 'Roboto', sans-serif";
-          ctx.fillText(bold, startX, yMid);
-          ctx.font = "400 13px 'Roboto', sans-serif";
-          ctx.fillText(light, startX + wBold, yMid);
+          const LH = 17;
+          const lines = [];
+          lines.push({t:fmtEurShort(v), f:"700 15px 'Roboto', sans-serif"});
+          if(segH >= 2*LH+8 && pct) lines.push({t:pct, f:"700 15px 'Roboto', sans-serif"});
+          if(segH >= 3*LH+8) lines.push({t:'('+cnt.c+', '+cnt.o+')', f:"400 13px 'Roboto', sans-serif"});
+          const y0L = yMid - (lines.length-1)*LH/2;
+          lines.forEach(function(ln, li){ ctx.font = ln.f; ctx.fillText(ln.t, el.x, y0L + li*LH); });
         });
       });
       ctx.textAlign = 'center';
@@ -1368,6 +1366,9 @@ function renderLast6Chart(){
         if(!el) return;
         if(hasPrevMonths){
           // totaal iets hoger, daaronder klein en grijs (vorig jaar) tussen haakjes
+          // groen = hoger dan dezelfde maand vorig jaar · oranje (zelfde als B-accounts) = lager · wit = gelijk / geen vergelijking
+          const pv = prevMonthRev[idx]||0;
+          ctx.fillStyle = pv<=0 ? '#F4F7FB' : (tot>pv ? '#4ADE80' : (tot<pv ? '#EA580C' : '#F4F7FB'));
           ctx.fillText(fmtEur(tot), el.x, el.y - 23);
           ctx.save();
           ctx.font = "500 12px 'Roboto', sans-serif";
