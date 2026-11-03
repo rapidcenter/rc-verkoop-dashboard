@@ -340,6 +340,11 @@
   .hist-tag.up{background:rgba(34,197,94,.18);color:#4ADE80}
   .hist-tag.down{background:rgba(249,115,22,.20);color:#FB923C}
   .hist-tag.out{background:rgba(239,68,68,.20);color:#F87171}
+  .client-card-header .drop-sum{color:#F87171}
+  .client-row.drop{background:rgba(239,68,68,.09);box-shadow:inset 3px 0 0 #EF4444}
+  .client-row.drop .rev{text-decoration:line-through;text-decoration-color:rgba(248,113,113,.9);opacity:.8}
+  .abc-drop-foot{padding:8px 14px;border-top:1px solid var(--surface2);font-size:11px;color:var(--muted)}
+  .abc-drop-foot i{display:inline-block;width:9px;height:9px;background:rgba(239,68,68,.5);border-radius:2px;margin-right:6px;vertical-align:-1px}
   .risk-tag{display:inline-block;margin-left:6px;padding:1px 6px;border-radius:4px;font-size:11px;font-weight:700;vertical-align:middle;white-space:nowrap;background:rgba(239,68,68,.20);color:#F87171}
   .client-rows{max-height:calc(100vh - 360px);overflow-y:auto}
   .client-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(360px,1fr));gap:16px;margin-bottom:24px;align-items:start}
@@ -1586,6 +1591,27 @@ function renderClients(){
     if(nxt === null) return '<span class="hist-tag out" title="Was A in '+y+', geen orders meer in '+(y+1)+' (YTD) — afgevallen">&#10005; weg in '+(y+1)+'</span>';
     return '<span class="hist-tag down" title="Was A in '+y+', in '+(y+1)+' nog maar een '+nxt+'-account — geen A meer">&#9660; '+nxt+' in '+(y+1)+'</span>';
   }
+  // Afgevallen in jaar y: de klant was op minstens één maandeinde in dat jaar (of eind het jaar ervoor) A volgens de
+  // canonieke 6-maands-regel (abcClassAt) en is dat aan het eind van de YTD-periode niet meer. Geeft null of
+  // {cls: huidige klasse, tag: html-label, since: maand-index}. Label: "▼ B sinds jun" of, bij ≥3 maanden zonder order,
+  // "✕ laatste order mei".
+  function droppedInfo(y, client){
+    const startIdx = y*12 - 1, endIdx = y*12 + cutoff - 1;
+    let lastA = -1;
+    for(let k = startIdx; k <= endIdx; k++){ if(abcClassAt(client, k, abThr) === 'A') lastA = k; }
+    if(lastA < 0 || lastA >= endIdx) return null;
+    const nowCls = (y === DATA.current_year) ? accountClassOf(client) : abcClassAt(client, endIdx, abThr);
+    if(nowCls === 'A') return null;
+    const e = abcIndex()[client] || {};
+    let lastOrder = -1;
+    for(const k in e){ const ki = +k; if(ki <= endIdx && e[k] > 0 && ki > lastOrder) lastOrder = ki; }
+    const dropIdx = lastA + 1;
+    const out = (lastOrder < 0) || (endIdx - lastOrder >= 3);
+    const tag = out
+      ? '<span class="hist-tag out" title="Was A, nu '+nowCls+' — geen orders meer sinds '+(lastOrder>=0?MONTHS[lastOrder%12]:'?')+'">&#10005; laatste order '+(lastOrder>=0?MONTHS[lastOrder%12]:'—')+'</span>'
+      : '<span class="hist-tag down" title="Was A tot en met '+MONTHS[lastA%12]+', sinds '+MONTHS[dropIdx%12]+' een '+nowCls+'-account">&#9660; '+nowCls+' sinds '+MONTHS[dropIdx%12]+'</span>';
+    return {cls: nowCls, tag: tag, since: dropIdx};
+  }
   // A-risico: huidige A-accounts die dreigen weg te vallen (geen recente orders / op de rand)
   let _maxTs = 0;
   all.forEach(o=>{ const t=new Date(o.y, o.m-1, o.d).getTime(); if(t>_maxTs) _maxTs=t; });
@@ -1618,20 +1644,41 @@ function renderClients(){
     const totRev = list.reduce((a,c)=>a+c.revenue,0);
     const maxRev = list.length ? Math.max.apply(null, list.map(c=>c.revenue)) : 1;
     const yearClass = 'y'+String(yr).slice(2);
-    let rows = '';
+    // Afgevallen A-accounts: in alle tabs rood gemarkeerd; in de A-tab worden ze (met huidige klasse B/C) tussen de
+    // A-accounts gezet op omzet. Totaal/percentages/rang blijven die van de A-accounts.
+    let nDropped = 0;
+    if(flt === 'A'){
+      const inList = {}; list.forEach(function(c){ inList[c.name] = 1; });
+      Object.keys(abcIndex()).forEach(function(name){
+        if(inList[name]) return;
+        const di = droppedInfo(yr, name); if(!di) return;
+        const ybe = yb[name];
+        list.push({name:name, revenue: ybe?ybe.rev:0, orders: ybe?ybe.orders:0, cls: di.cls, drop: di, injected:true});
+        nDropped++;
+      });
+      list.sort((a,b)=>b.revenue-a.revenue);
+    }
+    let rows = '', rankN = 0;
     list.forEach((c,i)=>{
-      const w = (c.revenue/maxRev*100).toFixed(0);
+      const w = Math.min(100, (c.revenue/maxRev*100)).toFixed(0);
       const badge = '<span class="abc-mini abc-'+c.cls+'">'+c.cls+'</span>';
-      const hist = historyTag(yr, c.name);
+      const hist = c.injected ? '' : historyTag(yr, c.name);
+      const di = c.drop || ((flt !== 'A') ? droppedInfo(yr, c.name) : null);
       const revPct = totRev>0 ? ' <span class="rev-pct">('+Math.round(c.revenue/totRev*100)+'%)</span>' : '';
       const custId = clientCustId[c.name];
-      const rankHtml = custId
-        ? '<a class="rank" href="https://console.amfg.ai/customer/'+custId+'" target="_blank" rel="noopener" title="Open klantkaart in AMFG">#'+(i+1)+'</a>'
-        : '<span class="rank">#'+(i+1)+'</span>';
-      rows += '<div class="client-row">'+rankHtml+'<span class="name abc-clickable" title="Klik om op deze klant te filteren" onclick="applyClientFilter(\''+c.name.replace(/\x27/g, "\\\x27")+'\')">'+badge+c.name+hist+dropTag(yr,c.name)+((yr===DATA.current_year)?aRiskTag(c.name):'')+'</span><span class="rev">'+fmtEurShort(c.revenue)+revPct+'</span><span class="orders">'+c.orders+'</span><div class="bar"><div style="width:'+w+'%;background:'+YEAR_COLORS[yr]+'"></div></div></div>';
+      let rankHtml;
+      if(c.injected) rankHtml = '<span class="rank">&ndash;</span>';
+      else {
+        rankN++;
+        const rk = (flt === 'A') ? rankN : (i+1);
+        rankHtml = custId
+          ? '<a class="rank" href="https://console.amfg.ai/customer/'+custId+'" target="_blank" rel="noopener" title="Open klantkaart in AMFG">#'+rk+'</a>'
+          : '<span class="rank">#'+rk+'</span>';
+      }
+      rows += '<div class="client-row'+(di?' drop':'')+'">'+rankHtml+'<span class="name abc-clickable" title="Klik om op deze klant te filteren" onclick="applyClientFilter(\''+c.name.replace(/\x27/g, "\\\x27")+'\')">'+badge+c.name+hist+(di?di.tag:'')+dropTag(yr,c.name)+((yr===DATA.current_year)?aRiskTag(c.name):'')+'</span><span class="rev">'+fmtEurShort(c.revenue)+revPct+'</span><span class="orders">'+c.orders+'</span><div class="bar"><div style="width:'+w+'%;background:'+(c.injected?'#EF4444':YEAR_COLORS[yr])+'"></div></div></div>';
     });
     if(!rows) rows = '<div class="empty" style="padding:16px;color:var(--ink-3)">Geen '+(flt==='all'?'':flt+'-')+'accounts in '+yr+'</div>';
-    html += '<div class="client-card"><div class="client-card-header"><span class="'+yearClass+'">'+yr+' YTD &mdash; '+labelMap[flt]+'</span><span class="'+yearClass+'">'+list.length+' &middot; '+fmtEurK(totRev)+'</span></div><div class="client-list-head"><span>#</span><span>Klant</span><span style="text-align:right">Omzet</span><span style="text-align:right">Orders</span><span>Aandeel</span></div><div class="client-rows">'+rows+'</div></div>';
+    html += '<div class="client-card"><div class="client-card-header"><span class="'+yearClass+'">'+yr+' YTD &mdash; '+labelMap[flt]+'</span><span class="'+yearClass+'">'+(flt==='A' ? (list.length-nDropped)+' A &middot; '+fmtEurK(totRev)+(nDropped>0 ? ' &middot; <span class="drop-sum">'+nDropped+' afgevallen '+(yr===DATA.current_year?'dit jaar':'in '+yr)+'</span>' : '') : list.length+' &middot; '+fmtEurK(totRev))+'</span></div><div class="client-list-head"><span>#</span><span>Klant</span><span style="text-align:right">Omzet</span><span style="text-align:right">Orders</span><span>Aandeel</span></div><div class="client-rows">'+rows+'</div>'+((flt==='A' && nDropped>0) ? '<div class="abc-drop-foot"><i></i>Rood gemarkeerd = was '+(yr===DATA.current_year?'dit jaar':'in '+yr)+' A, nu niet meer (de omzet telt niet mee in het A-totaal en de rang)</div>' : '')+'</div>';
   });
   document.getElementById('clientGrid').innerHTML = html;
 }
