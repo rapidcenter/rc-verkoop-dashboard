@@ -388,6 +388,41 @@
   .churn-kpi.down{border-left-color:var(--red)}
   .churn-kpi .lbl{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1.2px;font-family:'Roboto'}
   .churn-kpi .val{font-size:22px;font-weight:700;font-family:'Roboto';margin-top:4px}
+  .kv-lede{background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--rc-blue);border-radius:var(--radius);padding:16px 20px;font-size:17px;line-height:1.5;margin-bottom:14px}
+  .kv-lede b{font-weight:700}
+  .kv-up{color:#4ADE80}.kv-dn{color:#F87171}
+  .kv-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:14px}
+  .kv-kpi{background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--rc-blue);border-radius:var(--radius);padding:14px 18px}
+  .kv-kpi .lbl{font-size:11px;color:var(--rc-blue);text-transform:uppercase;letter-spacing:1.4px;font-family:'Roboto'}
+  .kv-kpi .val{font-size:30px;font-weight:700;font-family:'Roboto';margin:4px 0 2px}
+  .kv-kpi .hint{font-size:12px;color:var(--muted);line-height:1.4}
+  .kv-grid{display:grid;grid-template-columns:1.75fr 1fr;gap:14px;margin-bottom:14px}
+  @media (max-width:1200px){.kv-kpis{grid-template-columns:repeat(2,1fr)}.kv-grid{grid-template-columns:1fr}}
+  .kv-sub{font-size:12px;color:var(--muted);margin:2px 0 8px}
+  .kv-stack{display:flex;height:38px;border-radius:6px;overflow:hidden;gap:2px;margin:10px 0 8px}
+  .kv-stack div{display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;color:#fff;min-width:0;cursor:pointer}
+  .kv-legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--ink-2)}
+  .kv-legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:6px;vertical-align:-1px}
+  .kv-h{font-size:12px;font-weight:700;letter-spacing:1.4px;text-transform:uppercase;margin:20px 0 4px}
+  .kv-note{font-size:11.5px;color:var(--muted);margin-top:8px;line-height:1.45}
+  .kv-chiprow{display:flex;gap:10px;align-items:center;margin:4px 0 10px;flex-wrap:wrap}
+  .kv-chips{display:flex;gap:8px;flex-wrap:wrap}
+  .kv-chip{background:var(--surface);border:1px solid var(--border-2);color:var(--ink-2);padding:6px 14px;border-radius:999px;font-family:'Roboto';font-size:12px;font-weight:700;cursor:pointer}
+  .kv-chip i{font-style:normal;font-weight:400;opacity:.85;margin-left:6px}
+  .kv-chip:hover{border-color:var(--rc-blue);color:var(--white)}
+  .kv-chip.on{background:var(--rc-blue);border-color:var(--rc-blue);color:#fff}
+  .search-box.kv-search{width:260px;margin:0 0 0 auto}
+  .kv-scroll{max-height:560px;overflow:auto}
+  .kv-table{width:100%;border-collapse:collapse;font-size:13px}
+  .kv-table th{position:sticky;top:0;background:var(--surface2);font-size:10.5px;letter-spacing:1.2px;text-transform:uppercase;color:var(--muted);text-align:left;padding:7px 8px;font-weight:600}
+  .kv-table td{padding:7px 8px;border-bottom:1px solid var(--border);font-variant-numeric:tabular-nums}
+  .kv-table th.r,.kv-table td.r{text-align:right}
+  .kv-tag{font-size:10.5px;font-weight:700;border-radius:4px;padding:2px 7px;white-space:nowrap}
+  .kv-tag.weg{background:rgba(185,28,28,.28);color:#FCA5A5}.kv-tag.min{background:rgba(248,113,113,.16);color:#FCA5A5}
+  .kv-tag.meer{background:rgba(22,163,74,.22);color:#86EFAC}.kv-tag.nieuw{background:rgba(74,222,128,.16);color:#86EFAC}
+  .kv-dbar{position:relative;height:14px;width:150px}
+  .kv-dbar:before{content:"";position:absolute;left:50%;top:0;bottom:0;width:1px;background:var(--border-2)}
+  .kv-dbar span{position:absolute;top:2px;height:10px;border-radius:2px}
   .search-box{width:100%;padding:10px 14px;background:var(--surface2);border:1px solid var(--surface3);color:var(--text);border-radius:6px;font-family:'Roboto';font-size:13px;margin-bottom:12px}
   .search-box:focus{outline:none;border-color:var(--orange)}
   .churn-tables{display:grid;grid-template-columns:1fr 1fr;gap:16px}
@@ -671,19 +706,21 @@
 
 
   <section class="tab-section" id="tab-klantverloop">
-    <div class="churn-kpis" id="churnKpis"></div>
-    <input type="text" class="search-box" placeholder="Zoek klant..." oninput="filterChurn(this.value)">
-    <div class="churn-tables">
-      <div class="churn-block">
-        <div class="churn-block-head"><span style="color:var(--red)">Weggevallen klanten</span><span class="count" id="churnCount">&mdash;</span></div>
-        <div class="scroll" id="churnList"></div>
+    <div class="kv-lede" id="kvLede"></div>
+    <div id="kvBody">
+      <div class="kv-kpis" id="churnKpis"></div>
+      <div class="kv-grid">
+        <div class="chart-box"><div class="chart-title"><span>Van vorig jaar naar dit jaar &mdash; omzetbrug</span></div>
+          <div class="kv-sub" id="kvBridgeSub"></div>
+          <div style="height:330px;position:relative"><canvas id="chartChurn"></canvas></div></div>
+        <div class="chart-box"><div class="chart-title"><span>Hoeveel klanten zitten erachter</span></div><div id="kvSide"></div></div>
       </div>
-      <div class="churn-block">
-        <div class="churn-block-head"><span style="color:var(--green)">Nieuwe klanten</span><span class="count" id="newCount">&mdash;</span></div>
-        <div class="scroll" id="newList"></div>
-      </div>
+      <div class="chart-box" id="kvTableBox"><div class="chart-title"><span>Grootste verschuivingen per klant</span></div>
+        <div class="kv-chiprow"><div id="kvChips" class="kv-chips"></div>
+          <input type="text" class="search-box kv-search" placeholder="Zoek klant..." oninput="filterChurn(this.value)"></div>
+        <div class="kv-scroll"><table class="kv-table"><thead id="kvHead"></thead><tbody id="kvRows"></tbody></table></div>
+        <div class="kv-note" id="kvTableNote"></div></div>
     </div>
-    <div class="chart-box" style="margin-top:16px"><div class="chart-title"><span>Klantverloop overzicht</span></div><div class="chart-canvas-wrap"><canvas id="chartChurn"></canvas></div></div>
   </section>
 
 
@@ -1770,28 +1807,117 @@ function renderInsights(){
   }
 }
 
+let KV_GROUP = 'all', KV_Q = '';
+const KV_COL = {weg:'#B91C1C', min:'#F87171', meer:'#16A34A', nieuw:'#4ADE80'};
+function kvLabels(){
+  const v = DATA.verloop || {};
+  return {weg: v.closed ? 'Niet besteld in '+v.cur_year : 'Nog niet besteld dit jaar', min:'Minder besteld', meer:'Meer besteld', nieuw:'Nieuw of terug'};
+}
+function kvSign(n){ return (n>=0?'+':'−')+'€'+Math.abs(Math.round(n/1000)).toLocaleString('nl-NL')+'K'; }
+function kvEsc(x){ return String(x).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;'); }
+function kvPct(x){ return Math.round(x*100)+'%'; }
 function renderChurnKPIs(){
-  const ch = DATA.churn;
-  document.getElementById('churnKpis').innerHTML =
-    '<div class="churn-kpi down"><div class="lbl">Weggevallen klanten</div><div class="val" style="color:var(--red)">'+ch.churned_count+'</div></div>'+
-    '<div class="churn-kpi"><div class="lbl">Behouden klanten</div><div class="val">'+ch.retained_count+'</div></div>'+
-    '<div class="churn-kpi up"><div class="lbl">Nieuwe klanten</div><div class="val" style="color:var(--green)">'+ch.new_count+'</div></div>'+
-    '<div class="churn-kpi down"><div class="lbl">Verloren omzet (vorig jaar)</div><div class="val" style="color:var(--red)">'+fmtEurShort(ch.churned_revenue_lost)+'</div></div>'+
-    '<div class="churn-kpi up"><div class="lbl">Nieuwe omzet (YTD)</div><div class="val" style="color:var(--green)">'+fmtEurShort(ch.new_revenue_gained)+'</div></div>';
-  document.getElementById('churnCount').textContent = ch.churned_count + ' klanten';
-  document.getElementById('newCount').textContent = ch.new_count + ' klanten';
-  renderChurnLists();
+  const v = DATA.verloop;
+  const lede = document.getElementById('kvLede'), kp = document.getElementById('churnKpis'), body = document.getElementById('kvBody');
+  if(!v || !(v.prevTot > 0)){
+    lede.innerHTML = 'Voor het klantverloop is omzet van het vorige jaar nodig. Laad een periode met vorig jaar erbij (niet &ldquo;Alleen deze maand&rdquo; of &ldquo;Alleen dit jaar&rdquo;).';
+    kp.innerHTML = ''; body.style.display = 'none'; return;
+  }
+  body.style.display = '';
+  const S = v.sums, C = v.counts, L = kvLabels();
+  const diff = v.curTot - v.prevTot, grr = (v.prevTot+S.weg+S.min)/v.prevTot, nrr = (v.prevTot+S.weg+S.min+S.meer)/v.prevTot;
+  const nPrev = C.weg + C.meer + C.min + C.gelijk, nKept = C.meer + C.min + C.gelijk;
+  const cls = diff>=0 ? 'kv-up' : 'kv-dn';
+  lede.innerHTML = (v.closed ? 'In <b>'+v.cur_year+'</b> is er <b>'+fmtEurK(v.curTot)+'</b> omzet, tegen <b>'+fmtEurK(v.prevTot)+'</b> in '+v.prev_year
+                             : 'Tot en met <b>'+v.until+'</b> is er <b>'+fmtEurK(v.curTot)+'</b> omzet, tegen <b>'+fmtEurK(v.prevTot)+'</b> in dezelfde periode vorig jaar')
+    + ' (<b class="'+cls+'">'+kvSign(diff)+'</b>, '+(diff>=0?'+':'−')+Math.abs(Math.round(diff/v.prevTot*100))+'%). '
+    + 'Nieuwe klanten leveren <b class="kv-up">'+kvSign(S.nieuw)+'</b>, klanten die meer bestellen <b class="kv-up">'+kvSign(S.meer)+'</b>. '
+    + 'Daar staat tegenover: <b class="kv-dn">'+kvSign(S.min)+'</b> bij klanten die minder bestellen en <b class="kv-dn">'+kvSign(S.weg)+'</b> bij klanten die '+(v.closed?'in '+v.cur_year+' niet bestelden':'dit jaar nog niet hebben besteld')+'.';
+  kp.innerHTML =
+    '<div class="kv-kpi"><div class="lbl">Omzetbehoud</div><div class="val">'+kvPct(grr)+'</div><div class="hint">Van elke €100 omzet van vorig jaar is €'+Math.round(grr*100)+' er nog, zonder rekening te houden met klanten die meer bestellen.</div></div>'+
+    '<div class="kv-kpi"><div class="lbl">Omzetbehoud incl. groei</div><div class="val">'+kvPct(nrr)+'</div><div class="hint">Idem, maar mét extra omzet van bestaande klanten. Boven 100% groei je ook zonder nieuwe klanten.</div></div>'+
+    '<div class="kv-kpi"><div class="lbl">Klantbehoud</div><div class="val">'+kvPct(nPrev?nKept/nPrev:0)+'</div><div class="hint">'+nKept+' van de '+nPrev+' klanten van vorig jaar bestelden ook '+(v.closed?'in '+v.cur_year:'dit jaar')+' ('+C.weg+' niet).</div></div>'+
+    '<div class="kv-kpi"><div class="lbl">Aandeel nieuwe klanten</div><div class="val">'+kvPct(v.curTot?v.newRev/v.curTot:0)+'</div><div class="hint">van de omzet '+(v.closed?'in '+v.cur_year:'dit jaar')+' komt van '+C.nieuw+' klanten die vorig jaar niet bestelden (of terug zijn na langere tijd).</div></div>';
+  document.getElementById('kvBridgeSub').textContent = (v.closed ? 'Heel '+v.prev_year+' tegenover heel '+v.cur_year+'.' : '1 jan t/m '+v.until+', beide jaren dezelfde periode.')
+    + ' Elk staafje is een groep klanten; klik erop om de klanten eronder te filteren. De as begint niet bij nul, zodat de verschillen zichtbaar blijven.';
+  const tot = C.weg + C.min + C.meer + C.nieuw;
+  const share10 = (function(){ let a=0,b=0; v.clients.forEach(function(c,i){ if(c.g==='gelijk') return; const x=Math.abs(c.d); b+=x; if(i<10) a+=x; }); return b?a/b:0; })();
+  document.getElementById('kvSide').innerHTML =
+    '<div class="kv-sub">Aantal klanten per groep, zelfde indeling als de brug.</div>'+
+    '<div class="kv-stack">'+['weg','min','meer','nieuw'].map(function(g){ return '<div style="flex:'+Math.max(C[g],0.0001)+';background:'+KV_COL[g]+(g==='min'||g==='nieuw'?';color:#102A12':'')+'" onclick="setChurnGroup(\''+g+'\')" title="'+kvEsc(L[g])+'">'+C[g]+'</div>'; }).join('')+'</div>'+
+    '<div class="kv-legend">'+['weg','min','meer','nieuw'].map(function(g){ return '<span><i style="background:'+KV_COL[g]+'"></i>'+L[g]+'</span>'; }).join('')+'</div>'+
+    '<div class="kv-h">Wie bepaalt het beeld?</div>'+
+    '<div class="kv-note" style="font-size:12px">De 10 klanten met de grootste verschuiving zijn goed voor '+kvPct(share10)+' van alle verschuivingen in omzet. Een handvol klanten bepaalt dus het totaalbeeld.</div>'+
+    '<div class="kv-note">Een klant staat bij &ldquo;'+kvEsc(L.weg)+'&rdquo; als hij in '+(v.closed?'het jaar ervoor':'dezelfde periode vorig jaar')+' wél bestelde. Sommigen komen later alsnog terug; kijk daarom naar de laatste order. &ldquo;Nieuw of terug&rdquo; telt ook klanten die eerder klant waren maar vorig jaar niet bestelden.</div>';
+  renderVerloopTable();
 }
-function renderChurnLists(q){
-  q = q||''; const ch = DATA.churn; const ql = q.toLowerCase();
-  const churnRows = ch.churned.filter(c=>!q||c.name.toLowerCase().indexOf(ql)>=0).map(c=>
-    '<div class="churn-row"><span class="name" title="'+c.name+'">'+c.name+'</span><span class="rev">'+fmtEurShort(c.prev_revenue)+'</span><span class="ord">'+c.prev_orders+'</span></div>').join('');
-  const newRows = ch.new.filter(c=>!q||c.name.toLowerCase().indexOf(ql)>=0).map(c=>
-    '<div class="churn-row"><span class="name" title="'+c.name+'">'+c.name+'</span><span class="rev">'+fmtEurShort(c.revenue)+'</span><span class="ord">'+c.orders+'</span></div>').join('');
-  document.getElementById('churnList').innerHTML = churnRows || '<div class="empty">Geen resultaten</div>';
-  document.getElementById('newList').innerHTML = newRows || '<div class="empty">Geen resultaten</div>';
+function setChurnGroup(g){
+  KV_GROUP = (KV_GROUP === g ? 'all' : g);
+  renderVerloopTable();
+  const box = document.getElementById('kvTableBox'); if(box && box.scrollIntoView) box.scrollIntoView({behavior:'smooth', block:'nearest'});
 }
-function filterChurn(q){ renderChurnLists(q); }
+function renderVerloopTable(){
+  const v = DATA.verloop; if(!v) return;
+  const L = kvLabels(), C = v.counts, q = (KV_Q||'').toLowerCase();
+  const nAll = C.weg + C.min + C.meer + C.nieuw;
+  const chip = function(g, lbl, n){ return '<span class="kv-chip'+(KV_GROUP===g?' on':'')+'" onclick="'+(g==='all'?'KV_GROUP=\'all\';renderVerloopTable()':'setChurnGroup(\''+g+'\')')+'">'+lbl+'<i>'+n+'</i></span>'; };
+  document.getElementById('kvChips').innerHTML = chip('all','Alle groepen',nAll)+chip('weg',L.weg,C.weg)+chip('min',L.min,C.min)+chip('meer',L.meer,C.meer)+chip('nieuw',L.nieuw,C.nieuw);
+  const thr = (typeof CURRENT_AB_THRESHOLD !== 'undefined') ? CURRENT_AB_THRESHOLD : 10000;
+  const cutoff = DATA.ytd_month || 12;
+  let list = v.clients.filter(function(c){ return c.g!=='gelijk' && (KV_GROUP==='all' || c.g===KV_GROUP) && (!q || c.name.toLowerCase().indexOf(q)>=0); });
+  const total = list.length; list = list.slice(0, 300);
+  let mx = 1; list.forEach(function(c){ const a=Math.abs(c.d); if(a>mx) mx=a; });
+  const MN = ['jan','feb','mrt','apr','mei','jun','jul','aug','sep','okt','nov','dec'];
+  document.getElementById('kvHead').innerHTML = '<tr><th>Klant</th><th title="Klasse aan het eind van vorig jaar (nieuwe klanten: nu)">ABC</th><th>Groep</th><th class="r">'+(v.closed?v.prev_year:'Vorig jaar (YTD)')+'</th><th class="r">'+(v.closed?v.cur_year:'Dit jaar (YTD)')+'</th><th class="r">Verschil</th><th></th><th>Laatste order</th><th class="r">Orders</th></tr>';
+  document.getElementById('kvRows').innerHTML = list.map(function(c){
+    const k = (c.g==='nieuw') ? abcClassAt(c.name, v.cur_year*12 + cutoff - 1, thr) : abcClassAt(c.name, v.prev_year*12 + 11, thr);
+    const w = Math.abs(c.d)/mx*50;
+    const bar = c.d>=0 ? '<span style="left:50%;width:'+w+'%;background:'+(c.g==='nieuw'?KV_COL.nieuw:KV_COL.meer)+'"></span>' : '<span style="right:50%;width:'+w+'%;background:'+(c.g==='weg'?KV_COL.weg:KV_COL.min)+'"></span>';
+    const ld = c.last ? new Date(c.last) : null;
+    const lastTxt = ld ? ld.getDate()+' '+MN[ld.getMonth()]+(ld.getFullYear()!==v.cur_year?' '+ld.getFullYear():'') : '—';
+    const tagTxt = (c.g==='nieuw' && c.back) ? 'Terug' : L[c.g];
+    const ord = c.g==='weg' ? c.ordPrev : c.ordCur;
+    return '<tr><td>'+kvEsc(c.name)+'</td><td><span class="abc-mini abc-'+k+'">'+k+'</span></td><td><span class="kv-tag '+c.g+'">'+kvEsc(tagTxt)+'</span></td>'+
+      '<td class="r">'+(c.prev>0?fmtEurK(c.prev):'—')+'</td><td class="r">'+(c.cur>0?fmtEurK(c.cur):'—')+'</td>'+
+      '<td class="r '+(c.d>=0?'kv-up':'kv-dn')+'"><b>'+(c.d>=0?'▲':'▼')+' '+fmtEurK(Math.abs(c.d))+'</b></td><td><div class="kv-dbar">'+bar+'</div></td><td>'+lastTxt+'</td><td class="r">'+ord+'</td></tr>';
+  }).join('') || '<tr><td colspan="9" class="empty">Geen resultaten</td></tr>';
+  document.getElementById('kvTableNote').textContent = 'Gesorteerd op grootste verschil in euro’s'+(total>list.length?' (de '+list.length+' grootste van '+total+')':'')+'. Het balkje loopt naar links bij omzetverlies en naar rechts bij winst. Orders = aantal orders in de vergeleken periode; ABC = klasse aan het eind van vorig jaar (nieuwe klanten: nu).';
+}
+function filterChurn(q){ KV_Q = q||''; renderVerloopTable(); }
+function buildVerloopChart(){
+  const v = DATA.verloop, cv = document.getElementById('chartChurn');
+  if(!cv || !v || !(v.prevTot > 0)) return null;
+  const S = v.sums, C = v.counts, L = kvLabels();
+  const r0 = v.prevTot, r1 = r0+S.weg, r2 = r1+S.min, r3 = r2+S.meer, r4 = r3+S.nieuw;
+  const steps = [[0,r0,'#5B7C99'],[r1,r0,KV_COL.weg],[r2,r1,KV_COL.min],[r2,r3,KV_COL.meer],[r3,r4,KV_COL.nieuw],[0,r4,'#5B7C99']];
+  const lines = [r0,r1,r2,r3,r4];
+  const vals = [r0,S.weg,S.min,S.meer,S.nieuw,r4];
+  const cnt = ['',C.weg+' klanten',C.min+' klanten',C.meer+' klanten',C.nieuw+' klanten',''];
+  const low = Math.min(r1,r2,r0);
+  const ymin = Math.max(0, Math.floor(low*0.85/100000)*100000);
+  const pyL = v.closed ? String(v.prev_year) : 'Vorig jaar (YTD)', cyL = v.closed ? String(v.cur_year) : 'Dit jaar (YTD)';
+  const growth = (r4>=r0?'+':'−')+Math.abs(Math.round((r4/r0-1)*100))+'% t.o.v. vorig jaar';
+  const groups = [null,'weg','min','meer','nieuw',null];
+  return new Chart(cv,{type:'bar',
+    data:{labels:[pyL,L.weg,L.min,L.meer,L.nieuw,cyL], datasets:[{data:steps.map(function(s){ return [Math.min(s[0],s[1]),Math.max(s[0],s[1])]; }), backgroundColor:steps.map(function(s){ return s[2]; }), borderWidth:0, borderRadius:3, barPercentage:.7, categoryPercentage:.9}]},
+    plugins:[{id:'kvLabels', afterDraw:function(ch){
+      const c = ch.ctx; c.save(); c.textAlign = 'center'; const m = ch.getDatasetMeta(0);
+      m.data.forEach(function(el,i){
+        const val = vals[i], tot = (i===0||i===5);
+        c.fillStyle = tot ? '#F4F7FB' : (val>=0 ? '#86EFAC' : '#FCA5A5'); c.font = "bold 15px 'Roboto',Arial"; c.textBaseline = 'bottom';
+        c.fillText(tot ? fmtEurK(val) : kvSign(val), el.x, el.y-20);
+        c.fillStyle = '#8FA3B8'; c.font = "12px 'Roboto',Arial";
+        c.fillText(i===5 ? growth : cnt[i], el.x, el.y-5);
+        if(i<5){ const nx = m.data[i+1], y = ch.scales.y.getPixelForValue(lines[i]);
+          c.strokeStyle = 'rgba(148,190,230,.35)'; c.setLineDash([3,3]); c.beginPath(); c.moveTo(el.x+el.width/2,y); c.lineTo(nx.x-nx.width/2,y); c.stroke(); c.setLineDash([]); }
+      });
+      c.restore(); }}],
+    options:{responsive:true, maintainAspectRatio:false, layout:{padding:{top:34}},
+      onClick:function(evt, els){ if(els && els.length && groups[els[0].index]) setChurnGroup(groups[els[0].index]); },
+      onHover:function(evt, els){ evt.native.target.style.cursor = (els && els.length && groups[els[0].index]) ? 'pointer' : 'default'; },
+      plugins:{legend:{display:false}, tooltip:{callbacks:{label:function(ctx){ const i = ctx.dataIndex; return (i===0||i===5) ? fmtEurK(vals[i]) : kvSign(vals[i])+' ('+cnt[i]+')'; }}}},
+      scales:{x:{grid:{display:false}, ticks:{color:'#C3D2E3', font:{size:12}}}, y:{min:ymin, grid:{color:'rgba(148,190,230,.09)'}, border:{display:false}, ticks:{color:'#8FA3B8', callback:function(x){ return fmtEurK(x); }}}}}});
+}
 
 
 // Custom plugin: toont waardes bovenop bars
@@ -1819,36 +1945,6 @@ function makeLabelsPlugin(formatter){
     }
   };
 }
-
-// Klantverloop: omzetregel in elke staaf (behouden / weggevallen / nieuw)
-const churnRevenuePlugin = {
-  id: 'churnRevenue',
-  afterDraw: function(chart){
-    const ch = DATA.churn; if(!ch) return;
-    const cy = ch.cur_year, py = ch.prev_year;
-    const lines = [
-      ['Omzet '+cy+' YTD '+fmtEurK(ch.retained_revenue_curr), '(vorig jaar zelfde periode '+fmtEurK(ch.retained_revenue_prev)+')'],
-      ['Verloren omzet '+fmtEurK(ch.churned_revenue_lost), '(heel '+py+')'],
-      ['Omzet '+cy+' YTD '+fmtEurK(ch.new_revenue_gained), '']
-    ];
-    const ctx = chart.ctx; ctx.save();
-    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    chart.getDatasetMeta(0).data.forEach(function(el, i){
-      const h = el.base - el.y; if(h < 14) return;
-      const cx = el.x, cyy = el.y + h/2;
-      ctx.fillStyle = '#FFFFFF'; ctx.font = "bold 13px 'Roboto', sans-serif";
-      const two = lines[i][1] && h >= 40;
-      if(two){
-        ctx.fillText(lines[i][0], cx, cyy-8);
-        ctx.fillStyle = 'rgba(255,255,255,.78)'; ctx.font = "500 11px 'Roboto', sans-serif";
-        ctx.fillText(lines[i][1], cx, cyy+8);
-      } else {
-        ctx.fillText(lines[i][0] + (lines[i][1] ? ' '+lines[i][1] : ''), cx, cyy);
-      }
-    });
-    ctx.restore();
-  }
-};
 
 const CD = {
   responsive:true, maintainAspectRatio:false,
@@ -2444,9 +2540,7 @@ function initCharts(){
     renderMonthDayChart();
     const box = document.getElementById('monthDayBox'); if(box) box.scrollIntoView({behavior:'smooth', block:'nearest'});
   }})});
-  charts.churn = new Chart(document.getElementById('chartChurn'),{type:'bar', data:{labels:['Behouden','Weggevallen','Nieuw'],
-    datasets:[{data:[DATA.churn.retained_count, DATA.churn.churned_count, DATA.churn.new_count], backgroundColor:['#16A34A', '#DC2626', '#0096D6'], borderWidth:0}]},
-    plugins:[makeLabelsPlugin(fmtNum), churnRevenuePlugin], options:Object.assign({}, CD, {scales:yAxisCount(), plugins:Object.assign({}, CD.plugins, {legend:{display:false}})})});
+  charts.churn = buildVerloopChart();
   // Dag-grafiek opnieuw tekenen als er al een maand gekozen was
   if(typeof MONTHDAY !== 'undefined' && MONTHDAY.year) renderMonthDayChart();
 }
@@ -3186,11 +3280,39 @@ function processExcelData(rows, fileName){
   const newC = Array.from(currClients).filter(c=>!prevClients.has(c));
   const churnData = churned.map(name=>{const sub=cleaned.filter(r=>r.year===prevYear&&r.client===name); return {name:name, prev_revenue:sub.reduce((a,b)=>a+b.revenue,0), prev_orders:sub.length};}).sort((a,b)=>b.prev_revenue-a.prev_revenue);
   const newData = newC.map(name=>{const sub=cleaned.filter(r=>r.year===currYear&&r.month<=cutoff&&r.client===name); return {name:name, revenue:sub.reduce((a,b)=>a+b.revenue,0), orders:sub.length};}).sort((a,b)=>b.revenue-a.revenue);
-  // Omzet van behouden klanten: dit jaar YTD en vorig jaar over dezelfde periode (zelfde dag-van-jaar)
-  const retSet = new Set(retained);
-  const retRevCurr = cleaned.filter(r=>r.year===currYear&&r.month<=cutoff&&retSet.has(r.client)).reduce((a,b)=>a+b.revenue,0);
-  const retRevPrev = cleaned.filter(r=>r.year===prevYear&&r.date instanceof Date&&dayOfYear(r.date)<=cutoffDOY&&retSet.has(r.client)).reduce((a,b)=>a+b.revenue,0);
-  DATA.churn = {churned_count:churned.length, retained_count:retained.length, new_count:newC.length, churned_revenue_lost:churnData.reduce((a,b)=>a+b.prev_revenue,0), new_revenue_gained:newData.reduce((a,b)=>a+b.revenue,0), retained_revenue_curr:retRevCurr, retained_revenue_prev:retRevPrev, cur_year:currYear, prev_year:prevYear, churned:churnData.slice(0,100), new:newData.slice(0,100)};
+  DATA.churn = {churned_count:churned.length, retained_count:retained.length, new_count:newC.length, churned_revenue_lost:churnData.reduce((a,b)=>a+b.prev_revenue,0), new_revenue_gained:newData.reduce((a,b)=>a+b.revenue,0), churned:churnData.slice(0,100), new:newData.slice(0,100)};
+  // === Klantverloop (omzetbrug): per klant omzet tot dezelfde dag-van-jaar, dit jaar tegenover vorig jaar ===
+  (function(){
+    const vm = {}, lastOrd = {}, firstY = {};
+    cleaned.forEach(function(r){
+      if(!(r.date instanceof Date)) return;
+      const t = r.date.getTime();
+      if(!lastOrd[r.client] || t > lastOrd[r.client]) lastOrd[r.client] = t;
+      if(firstY[r.client] == null || r.year < firstY[r.client]) firstY[r.client] = r.year;
+      if(r.year !== currYear && r.year !== prevYear) return;
+      if(dayOfYear(r.date) > cutoffDOY) return;
+      const e = vm[r.client] || (vm[r.client] = {name:r.client, prev:0, cur:0, ordPrev:0, ordCur:0});
+      if(r.year === currYear){ e.cur += r.revenue; e.ordCur++; } else { e.prev += r.revenue; e.ordPrev++; }
+    });
+    const sums = {weg:0,min:0,meer:0,nieuw:0}, counts = {weg:0,min:0,meer:0,nieuw:0,gelijk:0};
+    let prevTot = 0, curTot = 0, newRev = 0; const list = [];
+    Object.keys(vm).forEach(function(k){
+      const e = vm[k]; const hp = e.prev > 0, hc = e.cur > 0;
+      if(!hp && !hc) return;
+      if(hp) prevTot += e.prev; if(hc) curTot += e.cur;
+      e.d = (hc?e.cur:0) - (hp?e.prev:0);
+      e.g = (hp && !hc) ? 'weg' : ((!hp && hc) ? 'nieuw' : (e.d > 0 ? 'meer' : (e.d < 0 ? 'min' : 'gelijk')));
+      e.last = lastOrd[k] || 0;
+      e.back = (e.g === 'nieuw' && firstY[k] != null && firstY[k] < currYear);
+      counts[e.g]++; if(e.g !== 'gelijk') sums[e.g] += e.d;
+      if(e.g === 'nieuw') newRev += e.cur;
+      list.push(e);
+    });
+    list.sort(function(a,b){ return Math.abs(b.d) - Math.abs(a.d); });
+    const un = closedView ? null : (latestCurrDate || new Date());
+    DATA.verloop = {cur_year:currYear, prev_year:prevYear, closed:closedView, until:un ? un.getDate()+' '+['jan','feb','mrt','apr','mei','jun','jul','aug','sep','okt','nov','dec'][un.getMonth()] : '',
+      prevTot:prevTot, curTot:curTot, newRev:newRev, sums:sums, counts:counts, clients:list};
+  })();
   // Growth factor — gebaseerd op AFGESLOTEN maanden (cutoff-1) zodat het niet fluctueert
   // wanneer we vroeg in een nieuwe maand zitten en die nog grotendeels leeg is.
   // Vergelijkt jan..vorige-maand van huidig jaar met dezelfde maanden vorig jaar.
