@@ -1820,6 +1820,36 @@ function makeLabelsPlugin(formatter){
   };
 }
 
+// Klantverloop: omzetregel in elke staaf (behouden / weggevallen / nieuw)
+const churnRevenuePlugin = {
+  id: 'churnRevenue',
+  afterDraw: function(chart){
+    const ch = DATA.churn; if(!ch) return;
+    const cy = ch.cur_year, py = ch.prev_year;
+    const lines = [
+      ['Omzet '+cy+' YTD '+fmtEurK(ch.retained_revenue_curr), '(vorig jaar zelfde periode '+fmtEurK(ch.retained_revenue_prev)+')'],
+      ['Verloren omzet '+fmtEurK(ch.churned_revenue_lost), '(heel '+py+')'],
+      ['Omzet '+cy+' YTD '+fmtEurK(ch.new_revenue_gained), '']
+    ];
+    const ctx = chart.ctx; ctx.save();
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    chart.getDatasetMeta(0).data.forEach(function(el, i){
+      const h = el.base - el.y; if(h < 14) return;
+      const cx = el.x, cyy = el.y + h/2;
+      ctx.fillStyle = '#FFFFFF'; ctx.font = "bold 13px 'Roboto', sans-serif";
+      const two = lines[i][1] && h >= 40;
+      if(two){
+        ctx.fillText(lines[i][0], cx, cyy-8);
+        ctx.fillStyle = 'rgba(255,255,255,.78)'; ctx.font = "500 11px 'Roboto', sans-serif";
+        ctx.fillText(lines[i][1], cx, cyy+8);
+      } else {
+        ctx.fillText(lines[i][0] + (lines[i][1] ? ' '+lines[i][1] : ''), cx, cyy);
+      }
+    });
+    ctx.restore();
+  }
+};
+
 const CD = {
   responsive:true, maintainAspectRatio:false,
   layout:{padding:{top:24,left:8,right:8,bottom:0}},
@@ -2416,7 +2446,7 @@ function initCharts(){
   }})});
   charts.churn = new Chart(document.getElementById('chartChurn'),{type:'bar', data:{labels:['Behouden','Weggevallen','Nieuw'],
     datasets:[{data:[DATA.churn.retained_count, DATA.churn.churned_count, DATA.churn.new_count], backgroundColor:['#16A34A', '#DC2626', '#0096D6'], borderWidth:0}]},
-    plugins:[makeLabelsPlugin(fmtNum)], options:Object.assign({}, CD, {scales:yAxisCount(), plugins:Object.assign({}, CD.plugins, {legend:{display:false}})})});
+    plugins:[makeLabelsPlugin(fmtNum), churnRevenuePlugin], options:Object.assign({}, CD, {scales:yAxisCount(), plugins:Object.assign({}, CD.plugins, {legend:{display:false}})})});
   // Dag-grafiek opnieuw tekenen als er al een maand gekozen was
   if(typeof MONTHDAY !== 'undefined' && MONTHDAY.year) renderMonthDayChart();
 }
@@ -3156,7 +3186,11 @@ function processExcelData(rows, fileName){
   const newC = Array.from(currClients).filter(c=>!prevClients.has(c));
   const churnData = churned.map(name=>{const sub=cleaned.filter(r=>r.year===prevYear&&r.client===name); return {name:name, prev_revenue:sub.reduce((a,b)=>a+b.revenue,0), prev_orders:sub.length};}).sort((a,b)=>b.prev_revenue-a.prev_revenue);
   const newData = newC.map(name=>{const sub=cleaned.filter(r=>r.year===currYear&&r.month<=cutoff&&r.client===name); return {name:name, revenue:sub.reduce((a,b)=>a+b.revenue,0), orders:sub.length};}).sort((a,b)=>b.revenue-a.revenue);
-  DATA.churn = {churned_count:churned.length, retained_count:retained.length, new_count:newC.length, churned_revenue_lost:churnData.reduce((a,b)=>a+b.prev_revenue,0), new_revenue_gained:newData.reduce((a,b)=>a+b.revenue,0), churned:churnData.slice(0,100), new:newData.slice(0,100)};
+  // Omzet van behouden klanten: dit jaar YTD en vorig jaar over dezelfde periode (zelfde dag-van-jaar)
+  const retSet = new Set(retained);
+  const retRevCurr = cleaned.filter(r=>r.year===currYear&&r.month<=cutoff&&retSet.has(r.client)).reduce((a,b)=>a+b.revenue,0);
+  const retRevPrev = cleaned.filter(r=>r.year===prevYear&&r.date instanceof Date&&dayOfYear(r.date)<=cutoffDOY&&retSet.has(r.client)).reduce((a,b)=>a+b.revenue,0);
+  DATA.churn = {churned_count:churned.length, retained_count:retained.length, new_count:newC.length, churned_revenue_lost:churnData.reduce((a,b)=>a+b.prev_revenue,0), new_revenue_gained:newData.reduce((a,b)=>a+b.revenue,0), retained_revenue_curr:retRevCurr, retained_revenue_prev:retRevPrev, cur_year:currYear, prev_year:prevYear, churned:churnData.slice(0,100), new:newData.slice(0,100)};
   // Growth factor — gebaseerd op AFGESLOTEN maanden (cutoff-1) zodat het niet fluctueert
   // wanneer we vroeg in een nieuwe maand zitten en die nog grotendeels leeg is.
   // Vergelijkt jan..vorige-maand van huidig jaar met dezelfde maanden vorig jaar.
