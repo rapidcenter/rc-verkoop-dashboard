@@ -423,7 +423,8 @@
   .kv-dbar{position:relative;height:14px;width:150px}
   .kv-dbar:before{content:"";position:absolute;left:50%;top:0;bottom:0;width:1px;background:var(--border-2)}
   .kv-dbar span{position:absolute;top:2px;height:10px;border-radius:2px}
-  .search-box{width:100%;padding:10px 14px;background:var(--surface2);border:1px solid var(--surface3);color:var(--text);border-radius:6px;font-family:'Roboto';font-size:13px;margin-bottom:12px}
+  .ath-note{margin:4px 0 2px;font-size:12.5px;font-weight:600;color:#FACC15;line-height:1.35}
+.search-box{width:100%;padding:10px 14px;background:var(--surface2);border:1px solid var(--surface3);color:var(--text);border-radius:6px;font-family:'Roboto';font-size:13px;margin-bottom:12px}
   .search-box:focus{outline:none;border-color:var(--orange)}
   .churn-tables{display:grid;grid-template-columns:1fr 1fr;gap:16px}
   @media (max-width:900px){.churn-tables{grid-template-columns:1fr}}
@@ -628,6 +629,7 @@
       <div class="chart-box">
         <div class="chart-title"><span>Omzet/intake &mdash; YTD</span><span class="sub" id="last6Sub">Trend</span></div>
         <div class="last6-stack" id="last6Stack"></div>
+        <div class="ath-note" id="athNote" style="display:none"></div>
         <div class="chart-canvas-wrap" id="chartLast6Wrap"><canvas id="chartLast6"></canvas><div id="abcTooltip" class="abc-tooltip"></div></div>
       </div>
       <div class="client-card">
@@ -1280,6 +1282,64 @@ function renderLast6Chart(){
     }
   })();
   const hasPrevMonths = prevMonthRev.some(function(v){ return v>0; });
+  // ===== All Time High (hoogste maandomzet ooit in de geladen data) =====
+  // Staten: 'zicht' (lopende maand nog onder de ATH maar haalbaar), 'gehaald' (lopende maand is nieuwe ATH),
+  // 'niet' (alleen de dunne lijn), 'hist'/'lijn' (afgesloten jaar-weergave).
+  // 'zicht' = nog niet gehaald, minstens 60% van de ATH binnen, minstens 1 werkdag over en het benodigde tempo
+  // per resterende werkdag is hooguit 1,5x het gemiddelde tempo van deze maand tot nu (kerstperiode telt gewogen mee).
+  const ath = (function(){
+    const ao = DATA.all_orders || [];
+    if(!ao.length || !m) return null;
+    const sums = {};
+    ao.forEach(function(o){ const k = o.y*12 + (o.m-1); sums[k] = (sums[k]||0) + o.rev; });
+    const closed = !!DATA.view_closed;
+    const limitKey = closed ? (yr*12+11) : (yr*12+(m-1));
+    let best = 0, bestKey = -1;
+    Object.keys(sums).forEach(function(ks){
+      const k = +ks;
+      if(closed ? (k > limitKey) : (k >= limitKey)) return;
+      if(sums[k] > best){ best = sums[k]; bestKey = k; }
+    });
+    if(best <= 0) return null;
+    const out = {val:best, key:bestKey, label: MONTHS[bestKey%12]+' '+String(Math.floor(bestKey/12)).slice(2)};
+    if(closed){
+      if(Math.floor(bestKey/12) === yr){ out.state = 'hist'; out.idx = bestKey%12; } else out.state = 'lijn';
+      return out;
+    }
+    const curTot = (segA[m-1]||0) + (segB[m-1]||0) + (segC[m-1]||0);
+    out.curIdx = m-1; out.curTot = curTot;
+    if(curTot >= best){ out.state = 'gehaald'; return out; }
+    out.state = 'niet';
+    const tm = DATA.this_month || {};
+    const p = String(tm.last_order_date || DATA.ytd_cutoff_date || '').split('-');
+    const ly = +p[0], lm = (+p[1])-1, ld = +p[2];
+    if(!(ly === yr && lm === m-1 && ld > 0)) return out;
+    const dim = new Date(ly, lm+1, 0).getDate();
+    const wd = function(d0, d1, weighted){
+      let n = 0;
+      for(let d=d0; d<=d1; d++){
+        const dow = new Date(ly, lm, d).getDay();
+        if(dow === 0 || dow === 6) continue;
+        n += (weighted && ((lm === 11 && d >= 23) || (lm === 0 && d <= 5))) ? 0.35 : 1;
+      }
+      return n;
+    };
+    const wdE = wd(1, ld, true), wdRw = wd(ld+1, dim, true), wdR = wd(ld+1, dim, false);
+    if(wdR < 1 || wdE <= 0 || wdRw <= 0) return out;
+    const pace = curTot / wdE, need = (best - curTot) / wdRw;
+    if(curTot >= best*0.6 && need <= pace*1.5){ out.state = 'zicht'; out.togo = best-curTot; out.wdR = wdR; out.need = need; out.pace = pace; }
+    return out;
+  })();
+  const athGold = '#FACC15', athGold2 = '#FDE68A';
+  const athK1 = function(v){ return '€'+(v/1000).toFixed(1).replace('.',',')+'K'; };
+  const athCrown = function(ctx, cx, cy, sz){
+    ctx.save();
+    ctx.translate(cx - sz/2, cy - sz/2); ctx.scale(sz/24, sz/24);
+    const pth = new Path2D('M2 8l5 4 5-8 5 8 5-4-2 12H4z');
+    ctx.fillStyle = athGold; ctx.fill(pth);
+    ctx.strokeStyle = '#7C5A00'; ctx.lineWidth = 1; ctx.lineJoin = 'round'; ctx.stroke(pth);
+    ctx.restore();
+  };
   // Custom plugin: toon totaalbedrag bovenop de gestapelde balk
   const totalsPlugin = {
     id:'totalLabels',
@@ -1348,6 +1408,89 @@ function renderLast6Chart(){
         }
       }
 
+      // All Time High: lijn, bij 'zicht' een spookbalk met kroon en toelichting, bij 'gehaald' goud om de balk
+      if(ath){
+        const ys = chart.scales.y, cA = chart.chartArea;
+        const yA = ys.getPixelForValue(ath.val);
+        const topM = chart.getDatasetMeta(chart.data.datasets.length-1);
+        ctx.save();
+        let athNote = '';
+        if(yA > cA.top && yA < cA.bottom){
+          ctx.strokeStyle = 'rgba(250,204,21,.55)'; ctx.lineWidth = 1.2; ctx.setLineDash([5,4]);
+          ctx.beginPath(); ctx.moveTo(cA.left, yA); ctx.lineTo(cA.right, yA); ctx.stroke(); ctx.setLineDash([]);
+          ctx.font = "700 11px 'Roboto', sans-serif"; ctx.fillStyle = athGold; ctx.textAlign = 'left'; ctx.textBaseline = 'bottom';
+          const pre = (ath.state==='gehaald' ? 'VORIGE ALL TIME HIGH' : 'ALL TIME HIGH');
+          const cands = [pre+' · '+ath.label+' · '+fmtEurShort(ath.val), pre+' · '+fmtEurShort(ath.val)];
+          let lblTxt = '';
+          for(let ci=0; ci<cands.length && !lblTxt; ci++){
+            const wL = ctx.measureText(cands[ci]).width;
+            const hit = topM.data.some(function(o){ return o && (cA.left+6 < o.x+45 && cA.left+6+wL > o.x-45) && (yA-18 < o.y && yA > o.y-44); });
+            if(!hit) lblTxt = cands[ci];
+          }
+          if(lblTxt) ctx.fillText(lblTxt, cA.left + 6, yA - 4);
+          else athNote = (ath.state==='gehaald' ? 'Vorige All Time High' : 'All Time High')+': '+ath.label+' · '+fmtEurShort(ath.val);
+        }
+        const elC = (ath.curIdx != null) ? topM.data[ath.curIdx] : null;
+        if(ath.state === 'zicht' && elC){
+          const bw = elC.width || 60, x0 = elC.x - bw/2, yTop = elC.y, hGhost = yTop - yA;
+          if(hGhost > 4){
+            ctx.fillStyle = 'rgba(250,204,21,.11)'; ctx.fillRect(x0, yA, bw, hGhost);
+            ctx.strokeStyle = athGold; ctx.lineWidth = 1.6; ctx.setLineDash([5,3]);
+            ctx.strokeRect(x0+.8, yA+.8, bw-1.6, hGhost-1.6); ctx.setLineDash([]);
+          }
+          const baseY = Math.min(yA, yTop - 46);   // boven het maandtotaal als de spookbalk daarvoor te laag is
+          athCrown(ctx, elC.x, baseY - 14, 22);
+          const wdTxt = ath.wdR + (ath.wdR===1 ? ' werkdag' : ' werkdagen');
+          ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+          const inside = hGhost >= 78;
+          const yT1 = inside ? yA + 19 : baseY - 48, yT2 = inside ? yA + 34 : baseY - 33;   // te weinig ruimte in de spookbalk → boven de kroon
+          ctx.font = "700 14px 'Roboto', sans-serif"; ctx.fillStyle = athGold;
+          ctx.fillText('nog '+fmtEurShort(ath.togo), elC.x, yT1);
+          ctx.font = "400 11px 'Roboto', sans-serif"; ctx.fillStyle = athGold2;
+          ctx.fillText(wdTxt, elC.x, yT2);
+          // Toelichting links van de balk, schuift op als er een maandtotaal in de weg staat
+          const l1 = 'All Time High in zicht';
+          const l2 = 'Nog '+fmtEurShort(ath.togo)+' tot de All Time High van '+ath.label+' ('+fmtEurShort(ath.val)+')';
+          const l3 = 'Nodig '+athK1(ath.need)+' per werkdag · tot nu gemiddeld '+athK1(ath.pace);
+          ctx.font = "700 14px 'Roboto', sans-serif"; const w1 = ctx.measureText(l1).width;
+          ctx.font = "400 12px 'Roboto', sans-serif"; const w2 = ctx.measureText(l2).width, w3 = ctx.measureText(l3).width;
+          const bW = Math.max(w1, w2, w3) + 28, bH = 70, by = cA.top + 4;
+          const clash = function(x){
+            return topM.data.some(function(o, j){
+              if(!o || j === ath.curIdx) return false;
+              return (x < o.x + 40 && x + bW > o.x - 40) && (by < o.y && by + bH > o.y - 46);
+            });
+          };
+          let bx = elC.x - bw/2 - 36 - bW, found = false;
+          while(bx >= cA.left){ if(!clash(bx)){ found = true; break; } bx -= 16; }
+          if(found){
+            ctx.fillStyle = '#003A5F'; ctx.strokeStyle = 'rgba(250,204,21,.75)'; ctx.lineWidth = 1;
+            ctx.beginPath();
+            if(ctx.roundRect) ctx.roundRect(bx, by, bW, bH, 8); else ctx.rect(bx, by, bW, bH);
+            ctx.fill(); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(bx + bW, by + bH/2); ctx.lineTo(elC.x - 12, baseY - 14); ctx.stroke();
+            ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+            ctx.font = "700 14px 'Roboto', sans-serif"; ctx.fillStyle = athGold; ctx.fillText(l1, bx+14, by+17);
+            ctx.font = "400 12px 'Roboto', sans-serif"; ctx.fillStyle = '#F4F7FB'; ctx.fillText(l2, bx+14, by+36);
+            ctx.fillStyle = '#8FA3B8'; ctx.fillText(l3, bx+14, by+54);
+          } else {
+            athNote = l1 + ' · ' + l2.charAt(0).toLowerCase() + l2.slice(1) + ' · ' + l3.charAt(0).toLowerCase() + l3.slice(1);
+          }
+        }
+        if(ath.state === 'gehaald' && elC){
+          const bw = elC.width || 60, x0 = elC.x - bw/2, yB = ys.getPixelForValue(0);
+          ctx.shadowColor = 'rgba(250,204,21,.65)'; ctx.shadowBlur = 14;
+          ctx.strokeStyle = athGold; ctx.lineWidth = 2.2;
+          ctx.strokeRect(x0, elC.y, bw, yB - elC.y);
+        }
+        ctx.restore();
+        const noteEl = document.getElementById('athNote');
+        if(noteEl){ noteEl.textContent = athNote; noteEl.style.display = athNote ? 'block' : 'none'; }
+      } else {
+        const noteEl0 = document.getElementById('athNote');
+        if(noteEl0) noteEl0.style.display = 'none';
+      }
+
       // Per-segment labels: bold bedrag + % en light tussen haakjes (klanten, orders)
       ctx.textBaseline = 'middle';
       ctx.fillStyle = '#FFFFFF';
@@ -1411,6 +1554,7 @@ function renderLast6Chart(){
           // groen = hoger dan dezelfde maand vorig jaar · oranje (zelfde als B-accounts) = lager · wit = gelijk / geen vergelijking
           const pv = prevMonthRev[idx]||0;
           ctx.fillStyle = pv<=0 ? '#F4F7FB' : (tot>pv ? '#4ADE80' : (tot<pv ? '#EA580C' : '#F4F7FB'));
+          if(ath && ath.state==='gehaald' && idx===ath.curIdx) ctx.fillStyle = athGold;
           ctx.fillText(fmtEur(tot), el.x, el.y - 23);
           ctx.save();
           ctx.font = "500 12px 'Roboto', sans-serif";
@@ -1418,7 +1562,17 @@ function renderLast6Chart(){
           ctx.fillText('('+fmtEurShort(prevMonthRev[idx]||0)+')', el.x, el.y - 6);
           ctx.restore();
         } else {
+          if(ath && ath.state==='gehaald' && idx===ath.curIdx) ctx.fillStyle = athGold;
           ctx.fillText(fmtEur(tot), el.x, el.y - 8);
+        }
+        // All Time High op de balk: kroon + tekst (nieuwe ATH in de lopende maand, of de ATH-maand in een afgesloten jaar)
+        if(ath && ((ath.state==='gehaald' && idx===ath.curIdx) || (ath.state==='hist' && idx===ath.idx))){
+          const tb = hasPrevMonths ? 23 : 8;
+          ctx.save();
+          ctx.font = "800 11px 'Roboto', sans-serif"; ctx.fillStyle = athGold; ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
+          ctx.fillText('ALL TIME HIGH', el.x, el.y - (tb + 21));
+          athCrown(ctx, el.x, el.y - (tb + 45), 22);
+          ctx.restore();
         }
       });
       ctx.restore();
@@ -1515,7 +1669,7 @@ function renderLast6Chart(){
       plugins: Object.assign({}, CD.plugins, {legend:{display:true, position:'bottom', labels:{color:'#F4F7FB',font:{size:16,family:'Roboto',weight:'500'},boxWidth:14,boxHeight:14,padding:16}, onHover: handleLegendHover, onLeave: handleLegendLeave}}),
       scales: {
         x: Object.assign({}, CD.scales.x, {stacked:true}),
-        y: Object.assign({}, CD.scales.y, {stacked:true, beginAtZero:true, ticks: Object.assign({}, CD.scales.y.ticks, {callback:function(v){return fmtEurShort(v);}})})
+        y: Object.assign({}, CD.scales.y, {stacked:true, beginAtZero:true, suggestedMax: (ath ? Math.max(ath.val, ath.curTot||0)*1.2 : undefined), ticks: Object.assign({}, CD.scales.y.ticks, {callback:function(v){return fmtEurShort(v);}})})
       }
     })
   });
