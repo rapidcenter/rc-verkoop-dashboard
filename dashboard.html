@@ -94,10 +94,12 @@
   #rcActions .row2 .sep{color:var(--ink-4);opacity:.6}
   #rcCountdownSub{font-variant-numeric:tabular-nums}
   #rcCountdownSub.urgent{color:var(--orange);font-weight:700}
-  #rcFsBtn,#rcRefreshBtn,#liveBanner{display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 13px;border-radius:6px;border:1px solid var(--rc-blue);font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;font-family:'Roboto';line-height:1;box-sizing:border-box}
-  #rcFsBtn,#rcRefreshBtn{background:transparent;color:var(--light-blue);cursor:pointer;transition:all .15s ease}
-  #rcFsBtn:hover,#rcRefreshBtn:hover{background:var(--rc-blue);color:#fff;border-color:var(--rc-blue)}
-  #rcFsBtn.is-on{background:var(--rc-blue);color:#fff}
+  #rcFsBtn,#rcRefreshBtn,#rcSoundBtn,#rcSoundTest,#liveBanner{display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 13px;border-radius:6px;border:1px solid var(--rc-blue);font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;font-family:'Roboto';line-height:1;box-sizing:border-box}
+  #rcFsBtn,#rcRefreshBtn,#rcSoundBtn,#rcSoundTest{background:transparent;color:var(--light-blue);cursor:pointer;transition:all .15s ease}
+  #rcFsBtn:hover,#rcRefreshBtn:hover,#rcSoundBtn:hover,#rcSoundTest:hover{background:var(--rc-blue);color:#fff;border-color:var(--rc-blue)}
+  #rcFsBtn.is-on,#rcSoundBtn.is-on{background:var(--rc-blue);color:#fff}
+  #rcSoundBtn.is-locked{border-color:var(--orange);animation:rcPulse 2s infinite}
+  #rcSoundTest.is-playing{background:var(--rc-blue);color:#fff}
   #rcRefreshBtn:disabled{opacity:.55;cursor:wait}
   #liveBanner{border-color:var(--green);background:rgba(34,197,94,.16);color:#4ADE80}
   #liveBanner .dot{display:inline-block;width:7px;height:7px;background:#22C55E;border-radius:50%;animation:rcPulse 2s infinite}
@@ -566,6 +568,8 @@
     <div class="row1">
       <button id="rcFsBtn" type="button" title="Volledig scherm aan/uit (Esc om te verlaten)">&#9974; Scherm</button>
       <button id="rcRefreshBtn" type="button" title="Nu verversen">Update nu</button>
+      <button id="rcSoundBtn" type="button" title="Geluid bij een nieuwe order aan/uit">Geluid: uit</button>
+      <button id="rcSoundTest" type="button" title="Speel het geluid af om te testen">Test</button>
       <span id="liveBanner"><span class="dot"></span>VERBINDING&hellip;</span>
     </div>
     <div class="row2">
@@ -5339,6 +5343,88 @@ function vkOrderCount(){
   }catch(e){ return 0; }
 }
 
+// ===== Geluid bij een nieuwe order =====
+// Aan/uit-keuze blijft bewaard (localStorage 'rc_sound'; standaard uit). Het geluid is een korte "ding-ding-ding" via Web Audio
+// (geen geluidsbestand nodig). Browsers laten geluid pas toe na één klik op de pagina: staat het geluid aan maar is de pagina nog
+// niet aangeklikt, dan pulseert de knop oranje ("is-locked") tot er geklikt is.
+let __vkAudio = null;
+function vkSoundOn(){ try{ return localStorage.getItem('rc_sound') === '1'; }catch(e){ return false; } }
+function vkAudioCtx(){
+  try{
+    if(!__vkAudio){ const C = window.AudioContext || window.webkitAudioContext; if(C) __vkAudio = new C(); }
+    if(__vkAudio && __vkAudio.state === 'suspended') __vkAudio.resume();
+  }catch(e){ console.warn('audio', e); }
+  return __vkAudio;
+}
+function vkPlayDing(){
+  const ac = vkAudioCtx(); if(!ac) return false;
+  try{
+    const t0 = ac.currentTime + 0.03;
+    [[880, 0], [1318.5, .17], [1760, .34]].forEach(function(n){
+      const o = ac.createOscillator(), g = ac.createGain();
+      o.type = 'sine'; o.frequency.value = n[0];
+      const t = t0 + n[1];
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(0.28, t + 0.015);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.75);
+      o.connect(g); g.connect(ac.destination);
+      o.start(t); o.stop(t + 0.8);
+    });
+    return true;
+  }catch(e){ console.warn('ding', e); return false; }
+}
+function vkUpdateSoundBtn(){
+  const b = document.getElementById('rcSoundBtn'); if(!b) return;
+  const on = vkSoundOn();
+  const locked = on && !(__vkAudio && __vkAudio.state === 'running');
+  b.classList.toggle('is-on', on);
+  b.classList.toggle('is-locked', locked);
+  b.textContent = on ? 'Geluid: aan' : 'Geluid: uit';
+  b.title = locked ? 'Geluid staat aan, maar de browser staat geluid pas toe na één klik op de pagina' : 'Geluid bij een nieuwe order aan/uit';
+}
+function vkSetupSound(){
+  const b = document.getElementById('rcSoundBtn'), t = document.getElementById('rcSoundTest');
+  if(b) b.addEventListener('click', function(){
+    const on = !vkSoundOn();
+    try{ localStorage.setItem('rc_sound', on ? '1' : '0'); }catch(e){}
+    if(on){ vkAudioCtx(); }   // deze klik ontgrendelt het geluid meteen
+    vkUpdateSoundBtn();
+  });
+  if(t) t.addEventListener('click', function(){
+    vkPlayDing();
+    t.classList.add('is-playing'); setTimeout(function(){ t.classList.remove('is-playing'); vkUpdateSoundBtn(); }, 900);
+    setTimeout(vkUpdateSoundBtn, 300);
+  });
+  const unlock = function(){ if(vkSoundOn()) vkAudioCtx(); setTimeout(vkUpdateSoundBtn, 200); };
+  document.addEventListener('pointerdown', unlock, true);
+  document.addEventListener('keydown', unlock, true);
+  vkUpdateSoundBtn();
+  setInterval(vkUpdateSoundBtn, 2000);
+}
+// Een "order" telt zoals in de rest van het dashboard: niet geannuleerd, netto > 0, met orderdatum
+function vkQualifies(r){
+  if(!r || !r['ORDER DATE']) return false;
+  if(String(r['TICKET STATUS']||'').toLowerCase().indexOf('cancel') >= 0) return false;
+  return (parseFloat(r['TOTAL NET PRICE']) || 0) > 0;
+}
+function vkOrderKey(r){ return String(r['PROJECT ID'] || r['TICKET ID'] || ''); }
+// Telt de échte nieuwe orders in een refresh: nog niet bekend vóór de refresh én de orderdatum is van de laatste 36 uur
+// (zo gaat er geen geluid af voor oudere orders die door een kleiner geladen venster nog niet bekend waren).
+function vkCountNewOrders(prevRows, newRows){
+  const known = new Set();
+  (prevRows || []).forEach(function(r){ if(vkQualifies(r)) known.add(vkOrderKey(r)); });
+  const now = Date.now(); let n = 0;
+  (newRows || []).forEach(function(r){
+    if(!vkQualifies(r)) return;
+    const k = vkOrderKey(r); if(!k || known.has(k)) return;
+    known.add(k);
+    const ts = new Date(r['ORDER DATE']).getTime();
+    if(!isNaN(ts) && now - ts < 36*3600*1000) n++;
+  });
+  return n;
+}
+function vkNewOrders(n){ if(n > 0 && vkSoundOn()) vkPlayDing(); }
+
 // Groene LIVE-pill met tijd + order-aantal; verkleurt oranje/rood als data veroudert
 function updateLivePill(){
   const lb = document.getElementById('liveBanner');
@@ -5383,6 +5469,7 @@ function vkSetupHeader(){
     document.addEventListener('webkitfullscreenchange', upd);
     upd();
   }
+  vkSetupSound();
   updateLivePill();
   setInterval(updateLivePill, 1000);   // pill blijft vers, ook als auto-refresh uit staat
 }
@@ -5461,8 +5548,10 @@ async function amfgRefreshRecent(){
   if(!res || !res.rows) return false;
   const cutTs = res.since.getTime();
   const kept = ALL_ROWS.filter(function(r){ const d=new Date(r['ORDER DATE']); return isNaN(d) || d.getTime() < cutTs; });
+  const nNew = vkCountNewOrders(ALL_ROWS, res.rows);   // vóór processWithFilter: daarna is ALL_ROWS vervangen
   processWithFilter(kept.concat(res.rows), 'AMFG live');
   window.__vkLastFetch = new Date();
+  vkNewOrders(nNew);
   if(typeof updateLivePill==='function') updateLivePill();
   const lbl=document.getElementById('fileNameLbl');
   if(lbl) lbl.innerHTML='&#128994; AMFG live &middot; bijgewerkt '+new Date().toLocaleTimeString('nl-NL',{hour:'2-digit',minute:'2-digit'});
