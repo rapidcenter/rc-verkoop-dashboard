@@ -304,6 +304,10 @@
   .md-btn.active{background:var(--rc-blue);color:#fff;border-color:var(--rc-blue)}
   .md-hint{color:var(--ink-3);font-size:12px;font-style:italic;padding:22px 4px;text-transform:none;letter-spacing:0;font-weight:400}
   .chart-title .sub{color:var(--ink-3);font-size:11px;letter-spacing:.05em;font-weight:400}
+  .ct-right{display:inline-flex;align-items:center;gap:12px}
+  .fs-sq{width:24px;height:24px;padding:0;display:inline-flex;align-items:center;justify-content:center;border:1px solid var(--rc-blue);border-radius:4px;background:transparent;color:var(--light-blue);cursor:pointer;transition:all .15s ease}
+  .fs-sq:hover,.fs-sq.is-on{background:var(--rc-blue);color:#fff}
+  .fs-sq svg{width:14px;height:14px;display:block}
   .chart-canvas-wrap{flex:1 1 auto;min-height:min(140px, calc(100vh - 940px));position:relative}
   .chart-canvas-wrap.tall{min-height:min(260px, calc(100vh - 760px))}
   .abc-tooltip{position:absolute;display:none;background:var(--navy-dark,#001523);border:1px solid var(--rc-blue);border-radius:6px;padding:10px 14px;font-family:'Roboto';font-size:12px;line-height:1.5;color:var(--ink);max-width:520px;box-shadow:var(--shadow-lg);z-index:50;pointer-events:none;letter-spacing:.01em}
@@ -425,6 +429,25 @@
   .kv-dbar{position:relative;height:14px;width:150px}
   .kv-dbar:before{content:"";position:absolute;left:50%;top:0;bottom:0;width:1px;background:var(--border-2)}
   .kv-dbar span{position:absolute;top:2px;height:10px;border-radius:2px}
+  .ms{position:fixed;inset:0;z-index:99999;background:#002b49;overflow:hidden;font-family:'Roboto','Segoe UI',Arial,sans-serif;color:#F4F7FB}
+  .ms-stage{position:absolute;left:0;top:0;width:1920px;height:1080px;transform-origin:0 0}
+  .ms-hdr{position:absolute;left:40px;top:26px;right:40px;height:96px}
+  .ms-hdr .t{font-size:58px;font-weight:800;letter-spacing:.04em;line-height:1.1}
+  .ms-hdr .s{font-size:25px;color:#8FA3B8;margin-top:2px}
+  .ms-live{position:absolute;right:76px;top:12px;display:inline-flex;align-items:center;gap:10px;height:44px;padding:0 22px;border-radius:8px;border:1px solid #22C55E;background:rgba(34,197,94,.16);color:#4ADE80;font-weight:700;font-size:20px;letter-spacing:.08em}
+  .ms-live i{display:inline-block;width:12px;height:12px;border-radius:50%;background:#22C55E}
+  .ms-live.is-warn{border-color:#F97316;background:rgba(249,115,22,.16);color:#FDBA74}.ms-live.is-warn i{background:#F97316}
+  .ms-live.is-stale{border-color:#EF4444;background:rgba(239,68,68,.16);color:#FCA5A5}.ms-live.is-stale i{background:#EF4444}
+  .ms-close{position:absolute;right:0;top:12px;width:44px;height:44px;border-radius:8px;border:1px solid #0096D6;background:transparent;color:#59BBE4;font-size:22px;cursor:pointer;opacity:.55;transition:all .15s ease}
+  .ms-close:hover{opacity:1;background:#0096D6;color:#fff}
+  .ms-card{position:absolute;left:1370px;width:510px;background:#003A5F;border-radius:14px;padding:20px 28px 18px 34px;overflow:hidden}
+  .ms-card:before{content:'';position:absolute;left:0;top:0;bottom:0;width:6px;background:var(--ac,#0096D6)}
+  .ms-lbl{font-size:21px;letter-spacing:.14em;text-transform:uppercase;color:#8FA3B8;font-weight:700}
+  .ms-big{font-weight:800;line-height:1;letter-spacing:-.01em;margin-top:10px}
+  .ms-sub{font-size:23px;color:#C7D3E0;margin-top:6px}
+  .ms-pill{display:inline-block;padding:3px 12px;border-radius:999px;font-weight:800;font-size:22px;margin-left:10px}
+  .ms-note{position:absolute;right:40px;bottom:8px;font-size:14px;color:#5F7690}
+  .ms-msg{position:absolute;left:0;right:0;top:420px;text-align:center;font-size:34px;color:#8FA3B8}
   .ath-note{margin:4px 0 2px;font-size:12.5px;font-weight:600;color:#FACC15;line-height:1.35}
 .search-box{width:100%;padding:10px 14px;background:var(--surface2);border:1px solid var(--surface3);color:var(--text);border-radius:6px;font-family:'Roboto';font-size:13px;margin-bottom:12px}
   .search-box:focus{outline:none;border-color:var(--orange)}
@@ -630,8 +653,8 @@
     </div>
     <div class="kpi-grid" id="monthKpiGrid"></div>
     <div class="chart-grid">
-      <div class="chart-box">
-        <div class="chart-title"><span>Omzet/intake &mdash; YTD</span><span class="sub" id="last6Sub">Trend</span></div>
+      <div class="chart-box" id="last6Box">
+        <div class="chart-title"><span>Omzet/intake &mdash; YTD</span><span class="ct-right"><span class="sub" id="last6Sub">Trend</span><button type="button" class="fs-sq" id="last6Fs" title="Volledig scherm: alleen deze grafiek (Esc om te sluiten)" aria-label="Volledig scherm"></button></span></div>
         <div class="last6-stack" id="last6Stack"></div>
         <div class="ath-note" id="athNote" style="display:none"></div>
         <div class="chart-canvas-wrap" id="chartLast6Wrap"><canvas id="chartLast6"></canvas><div id="abcTooltip" class="abc-tooltip"></div></div>
@@ -1677,6 +1700,7 @@ function renderLast6Chart(){
       }
     })
   });
+  msAfterRender();
 }
 
 function renderKPIs(){
@@ -5343,6 +5367,253 @@ function vkOrderCount(){
   }catch(e){ return 0; }
 }
 
+// ===== Maandscherm: schermvullend overzicht van de lopende maand (per werkdag en per week, A/B/C) =====
+// Bedoeld voor op een scherm op afstand. Wordt opnieuw getekend bij elke refresh van het dashboard (msAfterRender).
+// Weekend-orders tellen mee op de vrijdag ervoor (begint de maand in het weekend: op de eerstvolgende maandag).
+// "Nodig per werkdag" gebruikt gewone werkdagen (de kerst-weging van de prognose zit hier niet in).
+let msOpen = false, msFsEntered = false, msLiveTimer = null;
+const MS_NS = 'http://www.w3.org/2000/svg';
+function msK1(v){ return '€'+(v/1000).toFixed(1).replace('.',',')+'K'; }
+function msK0(v){ return '€'+Math.round(v/1000)+'K'; }
+function msBuild(){
+  const ao = DATA.all_orders || [];
+  if(DATA.view_closed || !ao.length || !DATA.current_year || !DATA.ytd_month) return null;
+  const yr = DATA.current_year, mi = DATA.ytd_month-1, dim = new Date(yr, mi+1, 0).getDate();
+  const slots = [], slotOfDay = {};
+  for(let d=1; d<=dim; d++){
+    const dow = new Date(yr, mi, d).getDay();
+    if(dow !== 0 && dow !== 6){ slotOfDay[d] = slots.length; slots.push({d:d, dow:dow, A:0, B:0, C:0, iso:0}); }
+  }
+  if(!slots.length) return null;
+  for(let d=1; d<=dim; d++){
+    const dow = new Date(yr, mi, d).getDay();
+    if(dow === 6){ slotOfDay[d] = slotOfDay[d-1 >= 1 ? d-1 : d+2]; }
+    else if(dow === 0){ slotOfDay[d] = slotOfDay[d-2 >= 1 ? d-2 : d+1]; }
+  }
+  // ISO-weeknummer per slot
+  slots.forEach(function(sl){
+    const dt = new Date(Date.UTC(yr, mi, sl.d)); const dn = dt.getUTCDay() || 7;
+    dt.setUTCDate(dt.getUTCDate() + 4 - dn);
+    const y0 = new Date(Date.UTC(dt.getUTCFullYear(), 0, 1));
+    sl.iso = Math.ceil((((dt - y0) / 86400000) + 1) / 7);
+  });
+  let ly = 0; const sums = {};
+  ao.forEach(function(o){
+    sums[o.y*12 + (o.m-1)] = (sums[o.y*12 + (o.m-1)] || 0) + o.rev;
+    if(o.y === yr-1 && o.m === mi+1) ly += o.rev;
+    if(o.y !== yr || o.m !== mi+1) return;
+    const sl = slots[slotOfDay[o.d]]; if(!sl) return;
+    const cl = accountClassOf(o.client); sl[(cl==='A'||cl==='B') ? cl : 'C'] += o.rev;
+  });
+  const curKey = yr*12 + mi; let best = 0, bestKey = -1;
+  Object.keys(sums).forEach(function(ks){ const k = +ks; if(k >= curKey) return; if(sums[k] > best){ best = sums[k]; bestKey = k; } });
+  const tm = DATA.this_month || {};
+  const p = String(tm.last_order_date || DATA.ytd_cutoff_date || '').split('-');
+  let now = -1;
+  if(+p[0] === yr && (+p[1])-1 === mi && +p[2] > 0) now = slotOfDay[+p[2]];
+  if(now == null || now < 0){ slots.forEach(function(sl, i){ if(sl.A+sl.B+sl.C > 0) now = i; }); }
+  if(now == null || now < 0) now = 0;
+  const T = slots.map(function(sl){ return sl.A+sl.B+sl.C; });
+  let total = 0, tA = 0, tB = 0, tC = 0;
+  for(let i=0; i<=now; i++){ total += T[i]; tA += slots[i].A; tB += slots[i].B; tC += slots[i].C; }
+  const n = slots.length, elapsed = now+1, remaining = n-elapsed;
+  const avg = elapsed > 0 ? total/elapsed : 0;
+  const out = {yr:yr, mi:mi, dim:dim, slots:slots, n:n, now:now, total:total, tA:tA, tB:tB, tC:tC, elapsed:elapsed, remaining:remaining, avg:avg, ly:ly,
+               target: DATA.month_target || 240000, ath: best > 0 ? {val:best, label: MONTHS[bestKey%12]+' '+String(Math.floor(bestKey/12)).slice(2)} : null, lastD: slots[now].d};
+  if(out.ath){
+    const need = remaining > 0 ? Math.max(0, out.ath.val - total)/remaining : 0;
+    out.ath.need = need;
+    if(total >= out.ath.val) out.ath.state = 'gehaald';
+    else if(remaining >= 1 && elapsed > 0 && total >= out.ath.val*0.6 && need <= avg*1.5) out.ath.state = 'zicht';
+    else out.ath.state = 'niet';
+  }
+  return out;
+}
+function msRender(){
+  const svg = document.getElementById('msSvg'), cards = document.getElementById('msCards');
+  if(!svg) return;
+  while(svg.firstChild) svg.removeChild(svg.firstChild);
+  const M = msBuild();
+  const title = document.getElementById('msTitle'), sub = document.getElementById('msSub'), note = document.getElementById('msNote');
+  if(!M){
+    title.textContent = 'MAANDSCHERM'; sub.textContent = ''; cards.innerHTML = '';
+    const t = document.createElementNS(MS_NS,'text'); t.setAttribute('x',960); t.setAttribute('y',520); t.setAttribute('text-anchor','middle'); t.setAttribute('fill','#8FA3B8'); t.setAttribute('font-size',34);
+    t.textContent = 'Geen orders voor de lopende maand om te tonen.'; svg.appendChild(t); return;
+  }
+  const DN = ['zo','ma','di','wo','do','vr','za'];
+  title.textContent = MONTHS_FULL[M.mi].toUpperCase()+' '+M.yr;
+  const dt0 = new Date(M.yr, M.mi, M.lastD);
+  sub.innerHTML = 'Omzet deze maand &nbsp;·&nbsp; t/m '+['zondag','maandag','dinsdag','woensdag','donderdag','vrijdag','zaterdag'][dt0.getDay()]+' '+M.lastD+' '+MONTHS_FULL[M.mi].toLowerCase()+' &nbsp;·&nbsp; werkdag '+M.elapsed+' van '+M.n;
+  note.textContent = 'weekend telt mee op vrijdag · alleen werkdagen';
+  function el(nm, a, t){ const e = document.createElementNS(MS_NS, nm); for(const k in a) e.setAttribute(k, a[k]); if(t != null) e.textContent = t; svg.appendChild(e); return e; }
+  const BLUE='#002b49', GRID='rgba(143,163,184,.16)', INK='#F4F7FB', MUTE='#8FA3B8', GOLD='#FACC15', ORG='#F59E0B';
+  const CA='#16A34A', CB='#EA580C', CC='#87898B';
+  const X0=130, X1=1318, SW=(X1-X0)/M.n, cx=function(i){ return X0+(i+.5)*SW; };
+  const K = 1000, slots = M.slots, now = M.now;
+  const cum = function(f){ let c=0; const o=[]; for(let i=0;i<=now;i++){ c += f(slots[i])/K; o.push(c); } return o; };
+  const cT = cum(function(s){return s.A+s.B+s.C;}), cA = cum(function(s){return s.A;}), cB = cum(function(s){return s.B;}), cC = cum(function(s){return s.C;});
+  const totalK = M.total/K, avgK = M.avg/K, athK = M.ath ? M.ath.val/K : 0, targetK = M.target/K, lyK = M.ly/K;
+  const projEnd = totalK + avgK*M.remaining;
+  // ----- paneel 1
+  const rawMax = Math.max(athK, targetK, projEnd, totalK, lyK)*1.12;
+  const step = rawMax <= 150 ? 25 : (rawMax <= 300 ? 50 : (rawMax <= 700 ? 100 : 200));
+  const VMAX = Math.ceil(rawMax/step)*step, TOP=176, BOT=506, y1 = function(v){ return BOT - v*(BOT-TOP)/VMAX; };
+  el('text',{x:40,y:150,fill:MUTE,'font-size':20,'font-weight':700,'letter-spacing':'.12em'},'OPBOUW VAN DE MAAND · € OPGETELD, TOTAAL EN PER A-, B- EN C-ACCOUNT');
+  for(let v=0; v<=VMAX; v+=step){ el('line',{x1:X0,x2:X1,y1:y1(v),y2:y1(v),stroke:GRID,'stroke-width':1}); el('text',{x:X0-12,y:y1(v)+6,'text-anchor':'end',fill:MUTE,'font-size':18}, v?('€'+v+'K'):'€0'); }
+  for(let i=0; i<M.n-1; i++){ if(slots[i].iso !== slots[i+1].iso){ const x = X0+(i+1)*SW; el('line',{x1:x,x2:x,y1:TOP,y2:BOT,stroke:GRID,'stroke-width':1}); } }
+  el('line',{x1:X0,x2:X1,y1:y1(targetK),y2:y1(targetK),stroke:ORG,'stroke-width':2,'stroke-dasharray':'8 6'});
+  el('text',{x:X0+8,y:y1(targetK)-9,fill:ORG,'font-size':20,'font-weight':700},'TARGET '+msK0(M.target));
+  if(M.ath){
+    el('line',{x1:X0,x2:X1,y1:y1(athK),y2:y1(athK),stroke:GOLD,'stroke-width':2,'stroke-dasharray':'8 6','stroke-opacity':.85});
+    el('text',{x:X0+8,y:y1(athK)-9,fill:GOLD,'font-size':20,'font-weight':700},(M.ath.state==='gehaald'?'VORIGE ':'')+'ALL TIME HIGH · '+M.ath.label+' · '+msK0(M.ath.val));
+  }
+  const line = function(arr, col, w){ const pts=[[X0,y1(0)]].concat(arr.map(function(v,i){ return [cx(i), y1(v)]; }));
+    el('path',{d:'M'+pts.map(function(q){return q.join(',');}).join(' L'),fill:'none',stroke:col,'stroke-width':w,'stroke-linejoin':'round','stroke-linecap':'round'}); };
+  line(cC,CC,3.5); line(cB,CB,3.5); line(cA,CA,4); line(cT,INK,5.5);
+  if(M.remaining > 0){
+    const proj=[]; for(let k=1;k<=M.remaining;k++) proj.push([cx(now+k), y1(totalK+avgK*k)]);
+    el('path',{d:'M'+cx(now)+','+y1(totalK)+' L'+proj.map(function(q){return q.join(',');}).join(' L'),fill:'none',stroke:GOLD,'stroke-width':4,'stroke-dasharray':'3 9','stroke-linecap':'round'});
+    const pe = proj[proj.length-1];
+    el('circle',{cx:pe[0],cy:pe[1],r:8,fill:BLUE,stroke:GOLD,'stroke-width':3});
+    el('text',{x:pe[0]+4,y:pe[1]-22,'text-anchor':'end',fill:GOLD,'font-size':22,'font-weight':800}, msK0(projEnd*K)+' op dit tempo');
+  }
+  const dot = function(arr, col, r){ el('circle',{cx:cx(now),cy:y1(arr[now]),r:r,fill:col,stroke:BLUE,'stroke-width':3}); };
+  dot(cC,CC,7); dot(cB,CB,7); dot(cA,CA,8); dot(cT,INK,10);
+  el('text',{x:cx(now)-20,y:y1(cT[now])-14,'text-anchor':'end',fill:INK,'font-size':30,'font-weight':800}, fmtEur(M.total));
+  const lab = function(t, col, y){ el('circle',{cx:cx(now)+26,cy:y-6,r:6,fill:col}); el('text',{x:cx(now)+38,y:y,fill:INK,'font-size':19,'font-weight':700},t); };
+  lab('A  '+msK0(M.tA), CA, y1(cA[now])+6); lab('C  '+msK0(M.tC), CC, y1(cC[now])-6); lab('B  '+msK0(M.tB), CB, y1(cB[now])+17);
+  if(M.ly > 0){
+    const lx = cx(M.n-1), ly = y1(lyK);
+    el('path',{d:'M'+lx+','+(ly-9)+' L'+(lx+9)+','+ly+' L'+lx+','+(ly+9)+' L'+(lx-9)+','+ly+' Z',fill:'none',stroke:MUTE,'stroke-width':2.5});
+    el('text',{x:lx+14,y:ly+34,'text-anchor':'end',fill:MUTE,'font-size':18,stroke:BLUE,'stroke-width':5,'paint-order':'stroke'},'vorig jaar '+msK0(M.ly));
+  }
+  // ----- paneel 2
+  const needK = M.ath && M.ath.state==='zicht' ? M.ath.need/K : 0;
+  const maxDay = Math.max.apply(null, slots.map(function(s,i){ return i<=now ? (s.A+s.B+s.C)/K : 0; }).concat([needK, 1]))*1.2;
+  const dstep = maxDay <= 12 ? 5 : (maxDay <= 30 ? 10 : (maxDay <= 60 ? 20 : 50)), DMAX = Math.ceil(maxDay/dstep)*dstep;
+  const BB=952, B0=668, y2 = function(v){ return BB - v*(BB-B0)/DMAX; };
+  el('text',{x:40,y:548,fill:MUTE,'font-size':20,'font-weight':700,'letter-spacing':'.12em'},'WEKEN EN DAGEN · omzet per werkdag in €K');
+  // weekkoppen
+  let wi = 0;
+  for(let i=0; i<M.n; ){
+    let j = i; while(j+1 < M.n && slots[j+1].iso === slots[i].iso) j++;
+    const xa = X0+i*SW+3, xb = X0+(j+1)*SW-3, cur = (now >= i && now <= j), single = (j === i);
+    let wsum = 0; for(let q=i; q<=j; q++) if(q<=now) wsum += (slots[q].A+slots[q].B+slots[q].C)/K;
+    el('rect',{x:xa,y:566,width:xb-xa,height:70,rx:10,fill:cur?'rgba(250,204,21,.10)':'rgba(255,255,255,.06)',stroke:cur?GOLD:'none','stroke-width':cur?1.5:0});
+    el('text',{x:(xa+xb)/2,y:590,'text-anchor':'middle',fill:MUTE,'font-size':single?15:19,'font-weight':700,'letter-spacing':'.1em'}, (single?'WK ':'WEEK ')+slots[i].iso);
+    el('text',{x:(xa+xb)/2,y:624,'text-anchor':'middle',fill:cur?GOLD:INK,'font-size':single?19:30,'font-weight':800}, (i>now) ? '–' : (single ? msK0(wsum*K) : msK1(wsum*K)));
+    i = j+1; wi++;
+  }
+  for(let v=0; v<=DMAX; v+=DMAX/2 >= 1 ? DMAX/2 : DMAX){ el('line',{x1:X0,x2:X1,y1:y2(v),y2:y2(v),stroke:GRID,'stroke-width':1}); el('text',{x:X0-12,y:y2(v)+6,'text-anchor':'end',fill:MUTE,'font-size':18}, v?('€'+v+'K'):'€0'); }
+  for(let i=0; i<M.n-1; i++){ if(slots[i].iso !== slots[i+1].iso){ const x = X0+(i+1)*SW; el('line',{x1:x,x2:x,y1:648,y2:BB+6,stroke:GRID,'stroke-width':1}); } }
+  el('rect',{x:X0+now*SW+2,y:648,width:SW-4,height:BB-648+60,rx:8,fill:'rgba(255,255,255,.07)'});
+  const BW = Math.min(34, SW*0.62), GAP = 2, lfs = SW >= 52 ? 22 : 20;
+  slots.forEach(function(sl, i){
+    const x = cx(i)-BW/2, tot = (sl.A+sl.B+sl.C)/K;
+    if(i <= now){
+      let base = BB; const segs = [[sl.A/K,CA],[sl.B/K,CB],[sl.C/K,CC]];
+      segs.forEach(function(sg, si){
+        const h = sg[0]*(BB-B0)/DMAX; if(h <= 0.3) return; const top = base-h;
+        if(si === 2){ el('path',{d:'M'+x+','+(base-GAP)+' V'+(top+4)+' Q'+x+','+top+' '+(x+4)+','+top+' H'+(x+BW-4)+' Q'+(x+BW)+','+top+' '+(x+BW)+','+(top+4)+' V'+(base-GAP)+' Z',fill:sg[1]}); }
+        else { el('rect',{x:x,y:top,width:BW,height:Math.max(h-(si===0?0:GAP),1),fill:sg[1]}); }
+        base = top;
+      });
+      el('text',{x:cx(i),y:y2(tot)-9,'text-anchor':'middle',fill:INK,'font-size':i===now?lfs+4:lfs,'font-weight':i===now?800:700}, tot.toFixed(1).replace('.',','));
+    } else if(needK > 0){
+      const yy = y2(needK);
+      el('rect',{x:x+1.5,y:yy+1.5,width:BW-3,height:BB-yy-1.5,rx:4,fill:'rgba(250,204,21,.10)',stroke:GOLD,'stroke-width':2,'stroke-dasharray':'5 4'});
+      el('text',{x:cx(i),y:yy-9,'text-anchor':'middle',fill:GOLD,'font-size':lfs,'font-weight':700}, needK.toFixed(1).replace('.',','));
+    }
+    el('text',{x:cx(i),y:BB+30,'text-anchor':'middle',fill:i===now?INK:(i>now?'#5F7690':MUTE),'font-size':i===now?20:18,'font-weight':i===now?800:500}, DN[sl.dow]+' '+sl.d);
+  });
+  const today = new Date(); const isToday = (today.getFullYear()===M.yr && today.getMonth()===M.mi && today.getDate()===slots[now].d);
+  el('text',{x:cx(now),y:BB+54,'text-anchor':'middle',fill:'#59BBE4','font-size':17,'font-weight':800,'letter-spacing':'.08em'}, isToday ? 'VANDAAG' : 'LAATSTE DAG');
+  el('line',{x1:X0,x2:X1,y1:BB,y2:BB,stroke:'rgba(143,163,184,.5)','stroke-width':1.5});
+  let lxp = X0;
+  const lg = function(col, txt, w, dash){ el('rect',{x:lxp,y:1022,width:16,height:16,rx:3,fill:dash?'rgba(250,204,21,.10)':col,stroke:dash?GOLD:'none','stroke-width':2,'stroke-dasharray':dash?'4 3':'0'}); el('text',{x:lxp+26,y:1036,fill:MUTE,'font-size':18},txt); lxp += w; };
+  lg(CA,'A-accounts',150); lg(CB,'B-accounts',150); lg(CC,'C-accounts',150);
+  if(needK > 0) lg(GOLD,'nodig per werkdag voor de All Time High ('+msK1(M.ath.need)+')',0,true);
+  // ----- kaarten rechts
+  const pct = M.ly > 0 ? Math.round((M.total-M.ly)/M.ly*100) : null;
+  const sA = M.total>0 ? M.tA/M.total*100 : 0, sB = M.total>0 ? M.tB/M.total*100 : 0, sC = Math.max(0, 100-sA-sB);
+  let best = -1, bestV = 0; slots.forEach(function(s,i){ if(i<=now && (s.A+s.B+s.C) > bestV){ bestV = s.A+s.B+s.C; best = i; } });
+  let h = '';
+  h += '<div class="ms-card" style="top:140px;height:262px;--ac:#16A34A"><div class="ms-lbl">Omzet deze maand</div>'+
+       '<div class="ms-big" style="font-size:78px;color:#4ADE80">'+fmtEur(M.total)+'</div>'+
+       '<div class="ms-sub">'+(M.ly>0 ? 'vorig jaar hele maand '+msK0(M.ly)+(pct!=null ? '<span class="ms-pill" style="background:'+(pct>=0?'rgba(34,197,94,.18);color:#4ADE80':'rgba(239,68,68,.18);color:#FCA5A5')+'">'+(pct>=0?'+':'')+pct+'%</span>' : '') : 'nog geen vorig jaar geladen')+'</div>'+
+       '<div style="display:flex;height:16px;margin-top:16px;gap:2px;border-radius:8px;overflow:hidden"><div style="width:'+sA.toFixed(1)+'%;background:#16A34A"></div><div style="width:'+sB.toFixed(1)+'%;background:#EA580C"></div><div style="width:'+sC.toFixed(1)+'%;background:#87898B"></div></div>'+
+       '<div style="display:flex;justify-content:space-between;margin-top:8px;font-size:20px;color:#C7D3E0;font-weight:500"><span><b style="color:#4ADE80">A</b> '+msK0(M.tA)+' · '+Math.round(sA)+'%</span><span><b style="color:#FB923C">B</b> '+msK0(M.tB)+'</span><span><b style="color:#B0B3B5">C</b> '+msK0(M.tC)+'</span></div></div>';
+  const tOk = M.total >= M.target;
+  h += '<div class="ms-card" style="top:418px;height:150px;--ac:#F59E0B"><div class="ms-lbl">Target '+msK0(M.target)+'</div>'+
+       (tOk ? '<div class="ms-big" style="font-size:56px;color:#4ADE80">Gehaald</div><div class="ms-sub" style="font-size:22px">'+msK1(M.total-M.target)+' erboven het target</div>'
+            : '<div class="ms-big" style="font-size:56px;color:#FDBA74">nog '+msK1(M.target-M.total)+'</div><div class="ms-sub" style="font-size:22px">'+(M.remaining>0 ? 'op dit tempo '+msK0(projEnd*K)+' ('+(projEnd*K>=M.target?'target gehaald':'target niet gehaald')+')' : 'maand voorbij')+'</div>')+'</div>';
+  if(M.ath){
+    const st = M.ath.state, prog = Math.min(100, M.total/M.ath.val*100);
+    if(st === 'gehaald'){
+      h += '<div class="ms-card" style="top:584px;height:240px;--ac:#FACC15;background:#00405F;box-shadow:inset 0 0 0 1.5px rgba(250,204,21,.55)"><div class="ms-lbl" style="color:#FDE68A">All Time High</div>'+
+           '<div class="ms-big" style="font-size:64px;color:#FACC15">gehaald!</div>'+
+           '<div style="position:relative;height:16px;border-radius:8px;background:#FACC15;margin-top:14px"></div>'+
+           '<div class="ms-sub" style="font-size:21px;margin-top:10px">'+msK1(M.total-M.ath.val)+' boven de vorige ('+M.ath.label+' · '+msK0(M.ath.val)+')</div></div>';
+    } else {
+      const zicht = (st === 'zicht');
+      h += '<div class="ms-card" style="top:584px;height:240px;--ac:'+(zicht?'#FACC15':'#8FA3B8')+';'+(zicht?'background:#00405F;box-shadow:inset 0 0 0 1.5px rgba(250,204,21,.55)':'')+'"><div class="ms-lbl" style="color:'+(zicht?'#FDE68A':'#8FA3B8')+'">All Time High · '+M.ath.label+' · '+msK0(M.ath.val)+'</div>'+
+           '<div class="ms-big" style="font-size:72px;color:'+(zicht?'#FACC15':'#C7D3E0')+'">nog '+msK0(M.ath.val-M.total)+'</div>'+
+           '<div style="position:relative;height:16px;border-radius:8px;background:rgba(255,255,255,.12);margin-top:14px"><div style="position:absolute;left:0;top:0;bottom:0;width:'+prog.toFixed(1)+'%;border-radius:8px;background:'+(zicht?'#FACC15':'#8FA3B8')+'"></div></div>'+
+           '<div class="ms-sub" style="font-size:21px;margin-top:10px">'+(M.remaining>0 ? 'Nodig '+msK1(M.ath.need)+' per werkdag · nu '+msK1(M.avg)+'<br>'+M.remaining+(M.remaining===1?' werkdag':' werkdagen')+' te gaan' : 'maand voorbij')+'</div></div>';
+    }
+  } else {
+    h += '<div class="ms-card" style="top:584px;height:240px;--ac:#FACC15"><div class="ms-lbl">Verwachting einde maand</div><div class="ms-big" style="font-size:72px;color:#FACC15">'+msK0(projEnd*K)+'</div><div class="ms-sub">op het huidige tempo</div></div>';
+  }
+  h += '<div class="ms-card" style="top:840px;height:200px;--ac:#0096D6"><div class="ms-lbl">Gemiddeld per werkdag</div>'+
+       '<div class="ms-big" style="font-size:60px;color:#F4F7FB">'+msK1(M.avg)+'</div>'+
+       '<div class="ms-sub" style="font-size:22px">'+(best>=0 ? 'Beste dag: '+(best===now && isToday ? 'vandaag' : DN[slots[best].dow]+' '+slots[best].d)+' · '+msK1(bestV) : '')+'</div></div>';
+  cards.innerHTML = h;
+}
+function msFit(){
+  const st = document.getElementById('msStage'); if(!st) return;
+  const s = Math.min(window.innerWidth/1920, window.innerHeight/1080);
+  st.style.transform = 'translate('+((window.innerWidth-1920*s)/2)+'px,'+((window.innerHeight-1080*s)/2)+'px) scale('+s+')';
+}
+function msUpdateLive(){
+  const lv = document.getElementById('msLive'), lb = document.getElementById('liveBanner'); if(!lv) return;
+  if(!window.__vkLastFetch){ lv.className = 'ms-live'; lv.innerHTML = '<i></i>LIVE'; return; }
+  lv.className = 'ms-live' + (lb && lb.className ? ' '+lb.className : '');
+  lv.innerHTML = '<i></i>LIVE · '+window.__vkLastFetch.toLocaleTimeString('nl-NL',{hour:'2-digit',minute:'2-digit'});
+}
+function msOpenScreen(){
+  const ms = document.getElementById('monthScreen'); if(!ms) return;
+  ms.style.display = 'block'; msOpen = true; msFsEntered = false;
+  msFit(); msRender(); msUpdateLive();
+  if(!msLiveTimer) msLiveTimer = setInterval(msUpdateLive, 1000);
+  try{ const req = ms.requestFullscreen || ms.webkitRequestFullscreen; if(req){ const pr = req.call(ms); if(pr && pr.catch) pr.catch(function(){}); } }catch(e){}
+}
+function msCloseScreen(){
+  const ms = document.getElementById('monthScreen'); if(!ms) return;
+  msOpen = false; msFsEntered = false; ms.style.display = 'none';
+  if(msLiveTimer){ clearInterval(msLiveTimer); msLiveTimer = null; }
+  try{ if((document.fullscreenElement || document.webkitFullscreenElement) === ms){ const ex = document.exitFullscreen || document.webkitExitFullscreen; if(ex) ex.call(document); } }catch(e){}
+}
+function msAfterRender(){
+  const b = document.getElementById('last6Fs'); if(b) b.style.display = DATA.view_closed ? 'none' : '';
+  if(msOpen){ try{ msRender(); }catch(e){ console.warn('maandscherm', e); } }
+}
+function msSetup(){
+  const f6 = document.getElementById('last6Fs'); if(!f6) return;
+  f6.innerHTML = '<svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="square"><path d="M1 5V1h4M9 1h4v4M13 9v4H9M5 13H1V9"/></svg>';
+  f6.title = 'Maandscherm: deze maand per week en dag, schermvullend (Esc om te sluiten)';
+  f6.addEventListener('click', msOpenScreen);
+  const c = document.getElementById('msClose'); if(c) c.addEventListener('click', msCloseScreen);
+  window.addEventListener('resize', function(){ if(msOpen) msFit(); });
+  document.addEventListener('keydown', function(e){ if(msOpen && e.key === 'Escape') msCloseScreen(); });
+  const fsch = function(){
+    const ms = document.getElementById('monthScreen'), fe = document.fullscreenElement || document.webkitFullscreenElement;
+    if(fe === ms){ msFsEntered = true; setTimeout(msFit, 50); }
+    else if(msOpen && msFsEntered){ msCloseScreen(); }
+  };
+  document.addEventListener('fullscreenchange', fsch);
+  document.addEventListener('webkitfullscreenchange', fsch);
+}
+
 // ===== Geluid bij een nieuwe order =====
 // Aan/uit-keuze blijft bewaard (localStorage 'rc_sound'; standaard uit). Het geluid is een korte "ding-ding-ding" via Web Audio
 // (geen geluidsbestand nodig). Browsers laten geluid pas toe na één klik op de pagina: staat het geluid aan maar is de pagina nog
@@ -5464,11 +5735,12 @@ function vkSetupHeader(){
   const fb = document.getElementById('rcFsBtn');
   if(fb){
     fb.addEventListener('click', vkToggleFullscreen);
-    const upd=function(){ const on=!!(document.fullscreenElement||document.webkitFullscreenElement); fb.classList.toggle('is-on',on); fb.innerHTML = on ? '⛶ Verlaat scherm' : '⛶ Scherm'; };
+    const upd=function(){ const on=((document.fullscreenElement||document.webkitFullscreenElement)===document.documentElement); fb.classList.toggle('is-on',on); fb.innerHTML = on ? '⛶ Verlaat scherm' : '⛶ Scherm'; };
     document.addEventListener('fullscreenchange', upd);
     document.addEventListener('webkitfullscreenchange', upd);
     upd();
   }
+  msSetup();   // vierkant fullscreen-knopje bij de grafiek Omzet/intake-YTD opent het maandscherm
   vkSetupSound();
   updateLivePill();
   setInterval(updateLivePill, 1000);   // pill blijft vers, ook als auto-refresh uit staat
@@ -5569,5 +5841,13 @@ window.addEventListener('DOMContentLoaded', async function(){
   vkSetupHeader();
 });
 </script>
+<div id="monthScreen" class="ms" style="display:none"><div class="ms-stage" id="msStage">
+  <div class="ms-hdr"><div class="t" id="msTitle"></div><div class="s" id="msSub"></div></div>
+  <div class="ms-live" id="msLive"></div>
+  <button type="button" class="ms-close" id="msClose" title="Sluiten (Esc)" aria-label="Sluiten">&#10005;</button>
+  <svg id="msSvg" width="1920" height="1080" viewBox="0 0 1920 1080" style="position:absolute;left:0;top:0"></svg>
+  <div id="msCards"></div>
+  <div class="ms-note" id="msNote"></div>
+</div></div>
 </body>
 </html>
