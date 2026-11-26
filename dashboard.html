@@ -434,11 +434,12 @@
   .ms-hdr{position:absolute;left:40px;top:26px;right:40px;height:96px}
   .ms-hdr .t{font-size:58px;font-weight:800;letter-spacing:.04em;line-height:1.1}
   .ms-hdr .s{font-size:25px;color:#8FA3B8;margin-top:2px}
-  .ms-live{position:absolute;right:76px;top:12px;display:inline-flex;align-items:center;gap:10px;height:44px;padding:0 22px;border-radius:8px;border:1px solid #22C55E;background:rgba(34,197,94,.16);color:#4ADE80;font-weight:700;font-size:20px;letter-spacing:.08em}
+  .ms-live{z-index:5;position:absolute;right:76px;top:12px;display:inline-flex;align-items:center;gap:10px;height:44px;padding:0 22px;border-radius:8px;border:1px solid #22C55E;background:rgba(34,197,94,.16);color:#4ADE80;font-weight:700;font-size:20px;letter-spacing:.08em}
   .ms-live i{display:inline-block;width:12px;height:12px;border-radius:50%;background:#22C55E}
   .ms-live.is-warn{border-color:#F97316;background:rgba(249,115,22,.16);color:#FDBA74}.ms-live.is-warn i{background:#F97316}
   .ms-live.is-stale{border-color:#EF4444;background:rgba(239,68,68,.16);color:#FCA5A5}.ms-live.is-stale i{background:#EF4444}
-  .ms-close{position:absolute;right:0;top:12px;width:44px;height:44px;border-radius:8px;border:1px solid #0096D6;background:transparent;color:#59BBE4;font-size:22px;cursor:pointer;opacity:.55;transition:all .15s ease}
+  #msSvg{pointer-events:none}
+  .ms-close{z-index:5;position:absolute;right:0;top:12px;width:44px;height:44px;border-radius:8px;border:1px solid #0096D6;background:transparent;color:#59BBE4;font-size:22px;cursor:pointer;opacity:.55;transition:all .15s ease}
   .ms-close:hover{opacity:1;background:#0096D6;color:#fff}
   .ms-card{position:absolute;left:1370px;width:510px;background:#003A5F;border-radius:14px;padding:20px 28px 18px 34px;overflow:hidden}
   .ms-card:before{content:'';position:absolute;left:0;top:0;bottom:0;width:6px;background:var(--ac,#0096D6)}
@@ -5406,6 +5407,7 @@ function msBuild(){
     const cl = accountClassOf(o.client); sl[(cl==='A'||cl==='B') ? cl : 'C'] += o.rev;
   });
   const curKey = yr*12 + mi; let best = 0, bestKey = -1;
+  let nMon = 0; Object.keys(sums).forEach(function(ks){ const k = +ks; if(k <= curKey && k > curKey-6) nMon++; });
   Object.keys(sums).forEach(function(ks){ const k = +ks; if(k >= curKey) return; if(sums[k] > best){ best = sums[k]; bestKey = k; } });
   const tm = DATA.this_month || {};
   const p = String(tm.last_order_date || DATA.ytd_cutoff_date || '').split('-');
@@ -5418,7 +5420,7 @@ function msBuild(){
   for(let i=0; i<=now; i++){ total += T[i]; tA += slots[i].A; tB += slots[i].B; tC += slots[i].C; }
   const n = slots.length, elapsed = now+1, remaining = n-elapsed;
   const avg = elapsed > 0 ? total/elapsed : 0;
-  const out = {yr:yr, mi:mi, dim:dim, slots:slots, n:n, now:now, total:total, tA:tA, tB:tB, tC:tC, elapsed:elapsed, remaining:remaining, avg:avg, ly:ly,
+  const out = {abc: nMon >= 4, yr:yr, mi:mi, dim:dim, slots:slots, n:n, now:now, total:total, tA:tA, tB:tB, tC:tC, elapsed:elapsed, remaining:remaining, avg:avg, ly:ly,
                target: DATA.month_target || 240000, ath: best > 0 ? {val:best, label: MONTHS[bestKey%12]+' '+String(Math.floor(bestKey/12)).slice(2)} : null, lastD: slots[now].d};
   if(out.ath){
     const need = remaining > 0 ? Math.max(0, out.ath.val - total)/remaining : 0;
@@ -5444,7 +5446,7 @@ function msRender(){
   title.textContent = MONTHS_FULL[M.mi].toUpperCase()+' '+M.yr;
   const dt0 = new Date(M.yr, M.mi, M.lastD);
   sub.innerHTML = 'Omzet deze maand &nbsp;·&nbsp; t/m '+['zondag','maandag','dinsdag','woensdag','donderdag','vrijdag','zaterdag'][dt0.getDay()]+' '+M.lastD+' '+MONTHS_FULL[M.mi].toLowerCase()+' &nbsp;·&nbsp; werkdag '+M.elapsed+' van '+M.n;
-  note.textContent = 'weekend telt mee op vrijdag · alleen werkdagen';
+  note.textContent = 'weekend telt mee op vrijdag · alleen werkdagen' + (M.abc ? '' : ' · A/B/C-indeling nodig minimaal 4 maanden historie (nu minder geladen)');
   function el(nm, a, t){ const e = document.createElementNS(MS_NS, nm); for(const k in a) e.setAttribute(k, a[k]); if(t != null) e.textContent = t; svg.appendChild(e); return e; }
   const BLUE='#002b49', GRID='rgba(143,163,184,.16)', INK='#F4F7FB', MUTE='#8FA3B8', GOLD='#FACC15', ORG='#F59E0B';
   const CA='#16A34A', CB='#EA580C', CC='#87898B';
@@ -5458,7 +5460,7 @@ function msRender(){
   const rawMax = Math.max(athK, targetK, projEnd, totalK, lyK)*1.12;
   const step = rawMax <= 150 ? 25 : (rawMax <= 300 ? 50 : (rawMax <= 700 ? 100 : 200));
   const VMAX = Math.ceil(rawMax/step)*step, TOP=176, BOT=506, y1 = function(v){ return BOT - v*(BOT-TOP)/VMAX; };
-  el('text',{x:40,y:150,fill:MUTE,'font-size':20,'font-weight':700,'letter-spacing':'.12em'},'OPBOUW VAN DE MAAND · € OPGETELD, TOTAAL EN PER A-, B- EN C-ACCOUNT');
+  el('text',{x:40,y:150,fill:MUTE,'font-size':20,'font-weight':700,'letter-spacing':'.12em'}, M.abc ? 'OPBOUW VAN DE MAAND · € OPGETELD, TOTAAL EN PER A-, B- EN C-ACCOUNT' : 'OPBOUW VAN DE MAAND · € OPGETELD');
   for(let v=0; v<=VMAX; v+=step){ el('line',{x1:X0,x2:X1,y1:y1(v),y2:y1(v),stroke:GRID,'stroke-width':1}); el('text',{x:X0-12,y:y1(v)+6,'text-anchor':'end',fill:MUTE,'font-size':18}, v?('€'+v+'K'):'€0'); }
   for(let i=0; i<M.n-1; i++){ if(slots[i].iso !== slots[i+1].iso){ const x = X0+(i+1)*SW; el('line',{x1:x,x2:x,y1:TOP,y2:BOT,stroke:GRID,'stroke-width':1}); } }
   el('line',{x1:X0,x2:X1,y1:y1(targetK),y2:y1(targetK),stroke:ORG,'stroke-width':2,'stroke-dasharray':'8 6'});
@@ -5469,7 +5471,8 @@ function msRender(){
   }
   const line = function(arr, col, w){ const pts=[[X0,y1(0)]].concat(arr.map(function(v,i){ return [cx(i), y1(v)]; }));
     el('path',{d:'M'+pts.map(function(q){return q.join(',');}).join(' L'),fill:'none',stroke:col,'stroke-width':w,'stroke-linejoin':'round','stroke-linecap':'round'}); };
-  line(cC,CC,3.5); line(cB,CB,3.5); line(cA,CA,4); line(cT,INK,5.5);
+  if(M.abc){ line(cC,CC,3.5); line(cB,CB,3.5); line(cA,CA,4); }
+  line(cT,INK,5.5);
   if(M.remaining > 0){
     const proj=[]; for(let k=1;k<=M.remaining;k++) proj.push([cx(now+k), y1(totalK+avgK*k)]);
     el('path',{d:'M'+cx(now)+','+y1(totalK)+' L'+proj.map(function(q){return q.join(',');}).join(' L'),fill:'none',stroke:GOLD,'stroke-width':4,'stroke-dasharray':'3 9','stroke-linecap':'round'});
@@ -5478,10 +5481,14 @@ function msRender(){
     el('text',{x:pe[0]+4,y:pe[1]-22,'text-anchor':'end',fill:GOLD,'font-size':22,'font-weight':800}, msK0(projEnd*K)+' op dit tempo');
   }
   const dot = function(arr, col, r){ el('circle',{cx:cx(now),cy:y1(arr[now]),r:r,fill:col,stroke:BLUE,'stroke-width':3}); };
-  dot(cC,CC,7); dot(cB,CB,7); dot(cA,CA,8); dot(cT,INK,10);
+  if(M.abc){ dot(cC,CC,7); dot(cB,CB,7); dot(cA,CA,8); }
+  dot(cT,INK,10);
   el('text',{x:cx(now)-20,y:y1(cT[now])-14,'text-anchor':'end',fill:INK,'font-size':30,'font-weight':800}, fmtEur(M.total));
-  const lab = function(t, col, y){ el('circle',{cx:cx(now)+26,cy:y-6,r:6,fill:col}); el('text',{x:cx(now)+38,y:y,fill:INK,'font-size':19,'font-weight':700},t); };
-  lab('A  '+msK0(M.tA), CA, y1(cA[now])+6); lab('C  '+msK0(M.tC), CC, y1(cC[now])-6); lab('B  '+msK0(M.tB), CB, y1(cB[now])+17);
+  if(M.abc){
+    const labs = [['A  '+msK0(M.tA), CA, y1(cA[now])], ['B  '+msK0(M.tB), CB, y1(cB[now])], ['C  '+msK0(M.tC), CC, y1(cC[now])]].sort(function(p,q){ return p[2]-q[2]; });
+    for(let i=1; i<labs.length; i++){ if(labs[i][2] < labs[i-1][2]+26) labs[i][2] = labs[i-1][2]+26; }
+    labs.forEach(function(L){ el('circle',{cx:cx(now)+26,cy:L[2],r:6,fill:L[1]}); el('text',{x:cx(now)+38,y:L[2]+6,fill:INK,'font-size':19,'font-weight':700,stroke:BLUE,'stroke-width':4,'paint-order':'stroke'},L[0]); });
+  }
   if(M.ly > 0){
     const lx = cx(M.n-1), ly = y1(lyK);
     el('path',{d:'M'+lx+','+(ly-9)+' L'+(lx+9)+','+ly+' L'+lx+','+(ly+9)+' L'+(lx-9)+','+ly+' Z',fill:'none',stroke:MUTE,'stroke-width':2.5});
@@ -5511,7 +5518,7 @@ function msRender(){
   slots.forEach(function(sl, i){
     const x = cx(i)-BW/2, tot = (sl.A+sl.B+sl.C)/K;
     if(i <= now){
-      let base = BB; const segs = [[sl.A/K,CA],[sl.B/K,CB],[sl.C/K,CC]];
+      let base = BB; const segs = M.abc ? [[sl.A/K,CA],[sl.B/K,CB],[sl.C/K,CC]] : [[0,CA],[0,CB],[(sl.A+sl.B+sl.C)/K,'#0096D6']];
       segs.forEach(function(sg, si){
         const h = sg[0]*(BB-B0)/DMAX; if(h <= 0.3) return; const top = base-h;
         if(si === 2){ el('path',{d:'M'+x+','+(base-GAP)+' V'+(top+4)+' Q'+x+','+top+' '+(x+4)+','+top+' H'+(x+BW-4)+' Q'+(x+BW)+','+top+' '+(x+BW)+','+(top+4)+' V'+(base-GAP)+' Z',fill:sg[1]}); }
@@ -5531,7 +5538,7 @@ function msRender(){
   el('line',{x1:X0,x2:X1,y1:BB,y2:BB,stroke:'rgba(143,163,184,.5)','stroke-width':1.5});
   let lxp = X0;
   const lg = function(col, txt, w, dash){ el('rect',{x:lxp,y:1022,width:16,height:16,rx:3,fill:dash?'rgba(250,204,21,.10)':col,stroke:dash?GOLD:'none','stroke-width':2,'stroke-dasharray':dash?'4 3':'0'}); el('text',{x:lxp+26,y:1036,fill:MUTE,'font-size':18},txt); lxp += w; };
-  lg(CA,'A-accounts',150); lg(CB,'B-accounts',150); lg(CC,'C-accounts',150);
+  if(M.abc){ lg(CA,'A-accounts',150); lg(CB,'B-accounts',150); lg(CC,'C-accounts',150); } else { lg('#0096D6','omzet per werkdag',230); }
   if(needK > 0) lg(GOLD,'nodig per werkdag voor de All Time High ('+msK1(M.ath.need)+')',0,true);
   // ----- kaarten rechts
   const pct = M.ly > 0 ? Math.round((M.total-M.ly)/M.ly*100) : null;
@@ -5541,8 +5548,8 @@ function msRender(){
   h += '<div class="ms-card" style="top:140px;height:262px;--ac:#16A34A"><div class="ms-lbl">Omzet deze maand</div>'+
        '<div class="ms-big" style="font-size:78px;color:#4ADE80">'+fmtEur(M.total)+'</div>'+
        '<div class="ms-sub">'+(M.ly>0 ? 'vorig jaar hele maand '+msK0(M.ly)+(pct!=null ? '<span class="ms-pill" style="background:'+(pct>=0?'rgba(34,197,94,.18);color:#4ADE80':'rgba(239,68,68,.18);color:#FCA5A5')+'">'+(pct>=0?'+':'')+pct+'%</span>' : '') : 'nog geen vorig jaar geladen')+'</div>'+
-       '<div style="display:flex;height:16px;margin-top:16px;gap:2px;border-radius:8px;overflow:hidden"><div style="width:'+sA.toFixed(1)+'%;background:#16A34A"></div><div style="width:'+sB.toFixed(1)+'%;background:#EA580C"></div><div style="width:'+sC.toFixed(1)+'%;background:#87898B"></div></div>'+
-       '<div style="display:flex;justify-content:space-between;margin-top:8px;font-size:20px;color:#C7D3E0;font-weight:500"><span><b style="color:#4ADE80">A</b> '+msK0(M.tA)+' · '+Math.round(sA)+'%</span><span><b style="color:#FB923C">B</b> '+msK0(M.tB)+'</span><span><b style="color:#B0B3B5">C</b> '+msK0(M.tC)+'</span></div></div>';
+       (!M.abc ? '' : '<div style="display:flex;height:16px;margin-top:16px;gap:2px;border-radius:8px;overflow:hidden"><div style="width:'+sA.toFixed(1)+'%;background:#16A34A"></div><div style="width:'+sB.toFixed(1)+'%;background:#EA580C"></div><div style="width:'+sC.toFixed(1)+'%;background:#87898B"></div></div>'+
+       '<div style="display:flex;justify-content:space-between;margin-top:8px;font-size:20px;color:#C7D3E0;font-weight:500"><span><b style="color:#4ADE80">A</b> '+msK0(M.tA)+' · '+Math.round(sA)+'%</span><span><b style="color:#FB923C">B</b> '+msK0(M.tB)+'</span><span><b style="color:#B0B3B5">C</b> '+msK0(M.tC)+'</span></div>') + '</div>';
   const tOk = M.total >= M.target;
   h += '<div class="ms-card" style="top:418px;height:150px;--ac:#F59E0B"><div class="ms-lbl">Target '+msK0(M.target)+'</div>'+
        (tOk ? '<div class="ms-big" style="font-size:56px;color:#4ADE80">Gehaald</div><div class="ms-sub" style="font-size:22px">'+msK1(M.total-M.target)+' erboven het target</div>'
