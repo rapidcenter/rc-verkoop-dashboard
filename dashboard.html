@@ -431,23 +431,23 @@
   .kv-dbar span{position:absolute;top:2px;height:10px;border-radius:2px}
   .ms{position:fixed;inset:0;z-index:99999;background:#002b49;overflow:hidden;font-family:'Roboto','Segoe UI',Arial,sans-serif;color:#F4F7FB}
   .ms-stage{position:absolute;left:0;top:0;width:1920px;height:1080px;transform-origin:0 0}
-  .ms-hdr{position:absolute;left:40px;top:26px;right:40px;height:96px}
+  .ms-hdr{position:absolute;left:40px;top:30px;right:40px;height:96px}
   .ms-hdr .t{font-size:58px;font-weight:800;letter-spacing:.04em;line-height:1.1}
   .ms-hdr .s{font-size:25px;color:#8FA3B8;margin-top:2px}
-  .ms-live{z-index:5;position:absolute;right:76px;top:12px;display:inline-flex;align-items:center;gap:10px;height:44px;padding:0 22px;border-radius:8px;border:1px solid #22C55E;background:rgba(34,197,94,.16);color:#4ADE80;font-weight:700;font-size:20px;letter-spacing:.08em}
+  .ms-live{z-index:5;position:absolute;right:108px;top:40px;display:inline-flex;align-items:center;gap:10px;height:52px;padding:0 22px;border-radius:10px;border:1px solid #22C55E;background:rgba(34,197,94,.16);color:#4ADE80;font-weight:700;font-size:21px;letter-spacing:.08em}
   .ms-live i{display:inline-block;width:12px;height:12px;border-radius:50%;background:#22C55E}
   .ms-live.is-warn{border-color:#F97316;background:rgba(249,115,22,.16);color:#FDBA74}.ms-live.is-warn i{background:#F97316}
   .ms-live.is-stale{border-color:#EF4444;background:rgba(239,68,68,.16);color:#FCA5A5}.ms-live.is-stale i{background:#EF4444}
   #msSvg{pointer-events:none}
-  .ms-close{z-index:5;position:absolute;right:0;top:12px;width:44px;height:44px;border-radius:8px;border:1px solid #0096D6;background:transparent;color:#59BBE4;font-size:22px;cursor:pointer;opacity:.55;transition:all .15s ease}
-  .ms-close:hover{opacity:1;background:#0096D6;color:#fff}
+  .ms-close{z-index:5;position:absolute;right:40px;top:40px;width:52px;height:52px;border-radius:10px;border:1.5px solid #59BBE4;background:rgba(0,150,214,.16);color:#CFE9F7;font-size:24px;cursor:pointer;transition:all .15s ease}
+  .ms-close:hover{background:#0096D6;color:#fff}
   .ms-card{position:absolute;left:1370px;width:510px;background:#003A5F;border-radius:14px;padding:20px 28px 18px 34px;overflow:hidden}
   .ms-card:before{content:'';position:absolute;left:0;top:0;bottom:0;width:6px;background:var(--ac,#0096D6)}
   .ms-lbl{font-size:21px;letter-spacing:.14em;text-transform:uppercase;color:#8FA3B8;font-weight:700}
   .ms-big{font-weight:800;line-height:1;letter-spacing:-.01em;margin-top:10px}
   .ms-sub{font-size:23px;color:#C7D3E0;margin-top:6px}
   .ms-pill{display:inline-block;padding:3px 12px;border-radius:999px;font-weight:800;font-size:22px;margin-left:10px}
-  .ms-note{position:absolute;right:40px;bottom:8px;font-size:14px;color:#5F7690}
+  .ms-note{position:absolute;right:602px;bottom:42px;font-size:16px;line-height:18px;color:#5F7690;text-align:right}
   .ms-msg{position:absolute;left:0;right:0;top:420px;text-align:center;font-size:34px;color:#8FA3B8}
   .ath-note{margin:4px 0 2px;font-size:12.5px;font-weight:600;color:#FACC15;line-height:1.35}
 .search-box{width:100%;padding:10px 14px;background:var(--surface2);border:1px solid var(--surface3);color:var(--text);border-radius:6px;font-family:'Roboto';font-size:13px;margin-bottom:12px}
@@ -5445,8 +5445,8 @@ function msRender(){
   const DN = ['zo','ma','di','wo','do','vr','za'];
   title.textContent = MONTHS_FULL[M.mi].toUpperCase()+' '+M.yr;
   const dt0 = new Date(M.yr, M.mi, M.lastD);
-  sub.innerHTML = 'Omzet deze maand &nbsp;·&nbsp; t/m '+['zondag','maandag','dinsdag','woensdag','donderdag','vrijdag','zaterdag'][dt0.getDay()]+' '+M.lastD+' '+MONTHS_FULL[M.mi].toLowerCase()+' &nbsp;·&nbsp; werkdag '+M.elapsed+' van '+M.n;
-  note.textContent = 'weekend telt mee op vrijdag · alleen werkdagen' + (M.abc ? '' : ' · A/B/C-indeling nodig minimaal 4 maanden historie (nu minder geladen)');
+  sub.innerHTML = 'Omzet deze maand &nbsp;·&nbsp; t/m '+['zondag','maandag','dinsdag','woensdag','donderdag','vrijdag','zaterdag'][dt0.getDay()]+' '+M.lastD+' '+MONTHS_FULL[M.mi].toLowerCase()+' &nbsp;·&nbsp; werkdag '+M.elapsed+' van '+M.n+' &nbsp;·&nbsp; weekend telt mee op vrijdag';
+  note.textContent = '';
   function el(nm, a, t){ const e = document.createElementNS(MS_NS, nm); for(const k in a) e.setAttribute(k, a[k]); if(t != null) e.textContent = t; svg.appendChild(e); return e; }
   const BLUE='#002b49', GRID='rgba(143,163,184,.16)', INK='#F4F7FB', MUTE='#8FA3B8', GOLD='#FACC15', ORG='#F59E0B';
   const CA='#16A34A', CB='#EA580C', CC='#87898B';
@@ -5460,7 +5460,7 @@ function msRender(){
   const rawMax = Math.max(athK, targetK, projEnd, totalK, lyK)*1.12;
   const step = rawMax <= 150 ? 25 : (rawMax <= 300 ? 50 : (rawMax <= 700 ? 100 : 200));
   const VMAX = Math.ceil(rawMax/step)*step, TOP=176, BOT=506, y1 = function(v){ return BOT - v*(BOT-TOP)/VMAX; };
-  el('text',{x:40,y:150,fill:MUTE,'font-size':20,'font-weight':700,'letter-spacing':'.12em'}, M.abc ? 'OPBOUW VAN DE MAAND · € OPGETELD, TOTAAL EN PER A-, B- EN C-ACCOUNT' : 'OPBOUW VAN DE MAAND · € OPGETELD');
+  el('text',{x:40,y:150,fill:MUTE,'font-size':20,'font-weight':700,'letter-spacing':'.12em'}, M.abc ? 'OPBOUW VAN DE MAAND · € OPGETELD, TOTAAL EN PER A-, B- EN C-ACCOUNT' : 'OPBOUW VAN DE MAAND · € OPGETELD · A/B/C-INDELING VRAAGT MINIMAAL 4 MAANDEN HISTORIE (NU MINDER GELADEN)');
   for(let v=0; v<=VMAX; v+=step){ el('line',{x1:X0,x2:X1,y1:y1(v),y2:y1(v),stroke:GRID,'stroke-width':1}); el('text',{x:X0-12,y:y1(v)+6,'text-anchor':'end',fill:MUTE,'font-size':18}, v?('€'+v+'K'):'€0'); }
   for(let i=0; i<M.n-1; i++){ if(slots[i].iso !== slots[i+1].iso){ const x = X0+(i+1)*SW; el('line',{x1:x,x2:x,y1:TOP,y2:BOT,stroke:GRID,'stroke-width':1}); } }
   el('line',{x1:X0,x2:X1,y1:y1(targetK),y2:y1(targetK),stroke:ORG,'stroke-width':2,'stroke-dasharray':'8 6'});
