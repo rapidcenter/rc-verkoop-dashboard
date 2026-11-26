@@ -439,6 +439,13 @@
   .ms-live.is-warn{border-color:#F97316;background:rgba(249,115,22,.16);color:#FDBA74}.ms-live.is-warn i{background:#F97316}
   .ms-live.is-stale{border-color:#EF4444;background:rgba(239,68,68,.16);color:#FCA5A5}.ms-live.is-stale i{background:#EF4444}
   #msSvg{pointer-events:none}
+  .ms-new{display:inline-flex;align-items:center;gap:8px;background:#FACC15;color:#3B2F00;font-weight:800;font-size:24px;letter-spacing:0;text-transform:none;padding:4px 14px;border-radius:999px;white-space:nowrap}
+  .ms-new small{font-size:16px;font-weight:700;opacity:.75}
+  @keyframes msBlinkNum{0%,100%{opacity:.4;color:#4ADE80;text-shadow:none}50%{opacity:1;color:#fff;text-shadow:0 0 28px rgba(74,222,128,.95),0 0 8px rgba(74,222,128,.8)}}
+  @keyframes msBlinkBox{0%,100%{box-shadow:none}50%{box-shadow:inset 0 0 0 2px rgba(74,222,128,.7),0 0 30px rgba(74,222,128,.35)}}
+  .ms-card.ms-blink{animation:msBlinkBox 1.6s ease-in-out infinite}
+  .ms-card.ms-blink .ms-big{animation:msBlinkNum 1.6s ease-in-out infinite}
+  @media (prefers-reduced-motion: reduce){.ms-card.ms-blink{animation:none;box-shadow:inset 0 0 0 2px rgba(74,222,128,.7)}.ms-card.ms-blink .ms-big{animation:none;color:#fff}}
   .ms-close{z-index:5;position:absolute;right:40px;top:40px;width:52px;height:52px;border-radius:10px;border:1.5px solid #59BBE4;background:rgba(0,150,214,.16);color:#CFE9F7;font-size:24px;cursor:pointer;transition:all .15s ease}
   .ms-close:hover{background:#0096D6;color:#fff}
   .ms-card{position:absolute;left:1370px;width:510px;background:#003A5F;border-radius:14px;padding:20px 28px 18px 34px;overflow:hidden}
@@ -5372,7 +5379,19 @@ function vkOrderCount(){
 // Bedoeld voor op een scherm op afstand. Wordt opnieuw getekend bij elke refresh van het dashboard (msAfterRender).
 // Weekend-orders tellen mee op de vrijdag ervoor (begint de maand in het weekend: op de eerstvolgende maandag).
 // "Nodig per werkdag" gebruikt gewone werkdagen (de kerst-weging van de prognose zit hier niet in).
-let msOpen = false, msFsEntered = false, msLiveTimer = null;
+let msOpen = false, msFsEntered = false, msLiveTimer = null, msNew = null, msNewTimer = null;
+const MS_BLINK_MS = 10*60*1000;   // zo lang knippert het maandtotaal na een nieuwe order
+function msScheduleExpiry(){
+  if(msNewTimer){ clearTimeout(msNewTimer); msNewTimer = null; }
+  if(!msNew) return;
+  msNewTimer = setTimeout(function(){ msNew = null; msNewTimer = null; if(msOpen){ try{ msRender(); }catch(e){} } }, Math.max(0, msNew.until - Date.now()) + 50);
+}
+function msRegisterNew(n, amt){
+  if(!(n > 0)) return;
+  const active = msNew && Date.now() < msNew.until;
+  msNew = {amt: (active ? msNew.amt : 0) + (amt || 0), at: new Date(), until: Date.now() + MS_BLINK_MS};   // meerdere orders binnen de tijd: bedrag telt op, de 10 minuten beginnen opnieuw
+  msScheduleExpiry();
+}
 const MS_NS = 'http://www.w3.org/2000/svg';
 function msK1(v){ return '€'+(v/1000).toFixed(1).replace('.',',')+'K'; }
 function msK0(v){ return '€'+Math.round(v/1000)+'K'; }
@@ -5545,7 +5564,9 @@ function msRender(){
   const sA = M.total>0 ? M.tA/M.total*100 : 0, sB = M.total>0 ? M.tB/M.total*100 : 0, sC = Math.max(0, 100-sA-sB);
   let best = -1, bestV = 0; slots.forEach(function(s,i){ if(i<=now && (s.A+s.B+s.C) > bestV){ bestV = s.A+s.B+s.C; best = i; } });
   let h = '';
-  h += '<div class="ms-card" style="top:140px;height:262px;--ac:#16A34A"><div class="ms-lbl">Omzet deze maand</div>'+
+  const nw = (msNew && Date.now() < msNew.until) ? msNew : null;
+  h += '<div class="ms-card'+(nw?' ms-blink':'')+'" style="top:140px;height:262px;--ac:#16A34A"><div class="ms-lbl" style="display:flex;justify-content:space-between;align-items:center;height:40px;margin-top:-4px"><span>Omzet deze maand</span>'+
+       (nw ? '<span class="ms-new">+ '+fmtEur(nw.amt)+' <small>'+nw.at.toLocaleTimeString('nl-NL',{hour:'2-digit',minute:'2-digit'})+'</small></span>' : '')+'</div>'+
        '<div class="ms-big" style="font-size:78px;color:#4ADE80">'+fmtEur(M.total)+'</div>'+
        '<div class="ms-sub">'+(M.ly>0 ? 'vorig jaar hele maand '+msK0(M.ly)+(pct!=null ? '<span class="ms-pill" style="background:'+(pct>=0?'rgba(34,197,94,.18);color:#4ADE80':'rgba(239,68,68,.18);color:#FCA5A5')+'">'+(pct>=0?'+':'')+pct+'%</span>' : '') : 'nog geen vorig jaar geladen')+'</div>'+
        (!M.abc ? '' : '<div style="display:flex;height:16px;margin-top:16px;gap:2px;border-radius:8px;overflow:hidden"><div style="width:'+sA.toFixed(1)+'%;background:#16A34A"></div><div style="width:'+sB.toFixed(1)+'%;background:#EA580C"></div><div style="width:'+sC.toFixed(1)+'%;background:#87898B"></div></div>'+
@@ -5691,13 +5712,13 @@ function vkOrderKey(r){ return String(r['PROJECT ID'] || r['TICKET ID'] || ''); 
 function vkCountNewOrders(prevRows, newRows){
   const known = new Set();
   (prevRows || []).forEach(function(r){ if(vkQualifies(r)) known.add(vkOrderKey(r)); });
-  const now = Date.now(); let n = 0;
+  const now = Date.now(); let n = 0; window.__vkNewAmt = 0;
   (newRows || []).forEach(function(r){
     if(!vkQualifies(r)) return;
     const k = vkOrderKey(r); if(!k || known.has(k)) return;
     known.add(k);
     const ts = new Date(r['ORDER DATE']).getTime();
-    if(!isNaN(ts) && now - ts < 36*3600*1000) n++;
+    if(!isNaN(ts) && now - ts < 36*3600*1000){ n++; window.__vkNewAmt += (parseFloat(r['TOTAL NET PRICE'])||0); }
   });
   return n;
 }
@@ -5828,6 +5849,7 @@ async function amfgRefreshRecent(){
   const cutTs = res.since.getTime();
   const kept = ALL_ROWS.filter(function(r){ const d=new Date(r['ORDER DATE']); return isNaN(d) || d.getTime() < cutTs; });
   const nNew = vkCountNewOrders(ALL_ROWS, res.rows);   // vóór processWithFilter: daarna is ALL_ROWS vervangen
+  if(typeof msRegisterNew==='function') msRegisterNew(nNew, window.__vkNewAmt || 0);   // knipperen + bedrag in het maandscherm (los van geluid aan/uit)
   processWithFilter(kept.concat(res.rows), 'AMFG live');
   window.__vkLastFetch = new Date();
   vkNewOrders(nNew);
