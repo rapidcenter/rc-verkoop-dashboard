@@ -490,6 +490,8 @@
   .orders-head,.orders-row{display:grid;grid-template-columns:90px 100px 1fr 140px 1fr 100px 100px 100px 100px 70px 60px 100px;gap:6px;align-items:center;padding:8px 12px;font-size:12px;caret-color:transparent}
   .orders-head>span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .orders-head.dm,.orders-row.dm{grid-template-columns:72px 92px 1fr 116px 112px 0.9fr 64px 74px 66px 66px 36px 42px 72px;gap:3px;padding:6px 6px;font-size:10.5px}
+  /* vandaag-markering in de orderlijst: groen balletje vóór de datum */
+  .orders-row .date .tdy-dot{display:inline-block;width:7px;height:7px;margin-right:5px;border-radius:50%;background:#4ADE80;box-shadow:0 0 6px #4ADE80;vertical-align:1px}
   .orders-row.dm .ticket{font-size:11px;white-space:nowrap;overflow:visible}
   .orders-row.dm .notes{font-size:13px}
   .orders-row.dm .status{white-space:nowrap}
@@ -1227,7 +1229,7 @@ function renderThisMonth(){
       const ds = isNaN(d) ? o.date : d.toLocaleDateString('nl-NL',{day:'2-digit',month:'short',year:'2-digit'});
       const pct = pctYTD(o.client_ytd||0);
       return '<div class="orders-row dm">'+
-        '<span class="date"><span class="dval">'+ds+'</span>'+(o.time?'<span class="time">'+o.time+'</span>':'')+'</span>'+
+        vkDateCell(o, ds)+
         '<span class="ticket">'+(o.project||o.ticket||'')+'</span>'+
         '<span class="client-cell"><span class="client" style="'+clientPillStyle(o.client)+'" title="Klik om op deze klant te filteren" onclick="applyClientFilter(\''+o.client.replace(/\x27/g, "\\\x27")+'\')">'+o.client+'</span>'+aCandidateBadge(o.client, o.client_ytd)+'</span>'+
         '<span class="status" style="'+statusStyle(o.status)+'" title="'+o.status+'">'+(o.status||'')+'</span>'+
@@ -3622,6 +3624,7 @@ function processExcelData(rows, fileName){
     const key = String(r['CUSTOMER COMPANY']||r['BILLING COMPANY']||'Onbekend').trim();
     return {
       date: isNaN(dt) ? '' : dt.toISOString().slice(0,10),
+      day: isNaN(dt) ? '' : dt.getFullYear()+'-'+String(dt.getMonth()+1).padStart(2,'0')+'-'+String(dt.getDate()).padStart(2,'0'),
       time: isNaN(dt) ? '' : String(dt.getHours()).padStart(2,'0')+':'+String(dt.getMinutes()).padStart(2,'0'),
       _ts: isNaN(dt) ? 0 : dt.getTime(),
       project: String(r['PROJECT ID']||''),
@@ -3650,6 +3653,7 @@ function processExcelData(rows, fileName){
     const key = String(r['CUSTOMER COMPANY']||r['BILLING COMPANY']||'Onbekend').trim();
     return {
       date: isNaN(dt) ? '' : dt.toISOString().slice(0,10),
+      day: isNaN(dt) ? '' : dt.getFullYear()+'-'+String(dt.getMonth()+1).padStart(2,'0')+'-'+String(dt.getDate()).padStart(2,'0'),
       time: isNaN(dt) ? '' : String(dt.getHours()).padStart(2,'0')+':'+String(dt.getMinutes()).padStart(2,'0'),
       _ts: isNaN(dt) ? 0 : dt.getTime(),
       project: String(r['PROJECT ID']||''),
@@ -3684,6 +3688,7 @@ function processExcelData(rows, fileName){
     const key = String(r['CUSTOMER COMPANY']||r['BILLING COMPANY']||'Onbekend').trim();
     return {
       date: isNaN(dt) ? '' : dt.toISOString().slice(0,10),
+      day: isNaN(dt) ? '' : dt.getFullYear()+'-'+String(dt.getMonth()+1).padStart(2,'0')+'-'+String(dt.getDate()).padStart(2,'0'),
       time: isNaN(dt) ? '' : String(dt.getHours()).padStart(2,'0')+':'+String(dt.getMinutes()).padStart(2,'0'),
       _ts: isNaN(dt) ? 0 : dt.getTime(),
       project: String(r['PROJECT ID']||''),
@@ -5035,7 +5040,7 @@ function renderOrdersList(){
     const dateStr = isNaN(d) ? o.date : d.toLocaleDateString('nl-NL',{day:'2-digit',month:'short',year:'2-digit'});
     const pct = pctYTD(o.client_ytd||0);
     return '<div class="orders-row">'+
-      '<span class="date"><span class="dval">'+dateStr+'</span>'+(o.time?'<span class="time">'+o.time+'</span>':'')+'</span>'+
+      vkDateCell(o, dateStr)+
       '<span class="ticket">'+(o.project||'')+'</span>'+
       '<span class="client-cell"><span class="client" style="'+clientPillStyle(o.client)+'" title="Klik om op deze klant te filteren" onclick="applyClientFilter(\''+o.client.replace(/\x27/g, "\\\x27")+'\')">'+o.client+'</span>'+aCandidateBadge(o.client, o.client_ytd)+'</span>'+
       '<span class="status" style="'+statusStyle(o.status)+'" title="'+o.status+'">'+o.status+'</span>'+
@@ -5051,6 +5056,12 @@ function renderOrdersList(){
   }).join('');
 }
 
+function vkTodayKey(){ const n = new Date(); return n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0')+'-'+String(n.getDate()).padStart(2,'0'); }
+function vkIsToday(o){ return !!o && (o.day || o.date) === vkTodayKey(); }
+function vkDateCell(o, ds){
+  const t = vkIsToday(o);
+  return '<span class="date'+(t?' is-today':'')+'"><span class="dval">'+(t ? '<i class="tdy-dot" title="Vandaag binnengekomen"></i>' : '')+ds+'</span>'+(o.time?'<span class="time">'+o.time+'</span>':'')+'</span>';
+}
 function clientPillStyle(client){
   const acc = (DATA.account_status && DATA.account_status[client]) || 'C';
   const colors = {A:'#16A34A', B:'#EA580C', C:'#87898B'};
@@ -5577,38 +5588,66 @@ function msRender(){
        '<div class="ms-sub">'+(M.ly>0 ? 'vorig jaar hele maand '+msK0(M.ly)+(pct!=null ? '<span class="ms-pill" style="background:'+(pct>=0?'rgba(34,197,94,.18);color:#4ADE80':'rgba(239,68,68,.18);color:#FCA5A5')+'">'+(pct>=0?'+':'')+pct+'%</span>' : '') : 'nog geen vorig jaar geladen')+'</div>'+
        (!M.abc ? '' : '<div style="display:flex;height:16px;margin-top:16px;gap:2px;border-radius:8px;overflow:hidden"><div style="width:'+sA.toFixed(1)+'%;background:#16A34A"></div><div style="width:'+sB.toFixed(1)+'%;background:#EA580C"></div><div style="width:'+sC.toFixed(1)+'%;background:#87898B"></div></div>'+
        '<div style="display:flex;justify-content:space-between;margin-top:8px;font-size:20px;color:#C7D3E0;font-weight:500"><span><b style="color:#4ADE80">A</b> '+msK0(M.tA)+' · '+Math.round(sA)+'%</span><span><b style="color:#FB923C">B</b> '+msK0(M.tB)+'</span><span><b style="color:#B0B3B5">C</b> '+msK0(M.tC)+'</span></div>') + '</div>';
-  const tOk = M.total >= M.target;
-  h += '<div class="ms-card" style="top:418px;height:150px;--ac:#F59E0B"><div class="ms-lbl">Target '+msK0(M.target)+'</div>'+
-       (tOk ? '<div class="ms-big" style="font-size:56px;color:#4ADE80">Gehaald</div><div class="ms-sub" style="font-size:22px">'+msK1(M.total-M.target)+' erboven het target</div>'
-            : '<div class="ms-big" style="font-size:56px;color:#FDBA74">nog '+msK1(M.target-M.total)+'</div><div class="ms-sub" style="font-size:22px">'+(M.remaining>0 ? 'op dit tempo '+msK0(projEnd*K)+' ('+(projEnd*K>=M.target?'target gehaald':'target niet gehaald')+')' : 'maand voorbij')+'</div>')+'</div>';
+  h += msLastOrderCard();
   if(M.ath){
     const st = M.ath.state, prog = Math.min(100, M.total/M.ath.val*100);
     if(st === 'gehaald'){
-      h += '<div class="ms-card" style="top:584px;height:240px;--ac:#FACC15;background:#00405F;box-shadow:inset 0 0 0 1.5px rgba(250,204,21,.55)"><div class="ms-lbl" style="color:#FDE68A">All Time High</div>'+
+      h += '<div class="ms-card" style="top:604px;height:240px;--ac:#FACC15;background:#00405F;box-shadow:inset 0 0 0 1.5px rgba(250,204,21,.55)"><div class="ms-lbl" style="color:#FDE68A">All Time High</div>'+
            '<div class="ms-big" style="font-size:64px;color:#FACC15">gehaald!</div>'+
            '<div style="position:relative;height:16px;border-radius:8px;background:#FACC15;margin-top:14px"></div>'+
            '<div class="ms-sub" style="font-size:21px;margin-top:10px">'+msK1(M.total-M.ath.val)+' boven de vorige ('+M.ath.label+' · '+msK0(M.ath.val)+')</div></div>';
     } else {
       const zicht = (st === 'zicht');
-      h += '<div class="ms-card" style="top:584px;height:240px;--ac:'+(zicht?'#FACC15':'#8FA3B8')+';'+(zicht?'background:#00405F;box-shadow:inset 0 0 0 1.5px rgba(250,204,21,.55)':'')+'"><div class="ms-lbl" style="color:'+(zicht?'#FDE68A':'#8FA3B8')+'">All Time High · '+M.ath.label+' · '+msK0(M.ath.val)+'</div>'+
+      h += '<div class="ms-card" style="top:604px;height:240px;--ac:'+(zicht?'#FACC15':'#8FA3B8')+';'+(zicht?'background:#00405F;box-shadow:inset 0 0 0 1.5px rgba(250,204,21,.55)':'')+'"><div class="ms-lbl" style="color:'+(zicht?'#FDE68A':'#8FA3B8')+'">All Time High · '+M.ath.label+' · '+msK0(M.ath.val)+'</div>'+
            '<div class="ms-big" style="font-size:72px;color:'+(zicht?'#FACC15':'#C7D3E0')+'">nog '+msK0(M.ath.val-M.total)+'</div>'+
            '<div style="position:relative;height:16px;border-radius:8px;background:rgba(255,255,255,.12);margin-top:14px"><div style="position:absolute;left:0;top:0;bottom:0;width:'+prog.toFixed(1)+'%;border-radius:8px;background:'+(zicht?'#FACC15':'#8FA3B8')+'"></div></div>'+
            '<div class="ms-sub" style="font-size:21px;margin-top:10px">'+(M.remaining>0 ? 'Nodig '+msK1(M.ath.need)+' per werkdag · nu '+msK1(M.avg)+'<br>'+M.remaining+(M.remaining===1?' werkdag':' werkdagen')+' te gaan' : 'maand voorbij')+'</div></div>';
     }
   } else {
-    h += '<div class="ms-card" style="top:584px;height:240px;--ac:#FACC15"><div class="ms-lbl">Verwachting einde maand</div><div class="ms-big" style="font-size:72px;color:#FACC15">'+msK0(projEnd*K)+'</div><div class="ms-sub">op het huidige tempo</div></div>';
+    h += '<div class="ms-card" style="top:604px;height:240px;--ac:#FACC15"><div class="ms-lbl">Verwachting einde maand</div><div class="ms-big" style="font-size:72px;color:#FACC15">'+msK0(projEnd*K)+'</div><div class="ms-sub">op het huidige tempo</div></div>';
   }
-  h += '<div class="ms-card" style="top:840px;height:200px;--ac:#0096D6"><div class="ms-lbl">Gemiddeld per werkdag</div>'+
+  h += '<div class="ms-card" style="top:860px;height:180px;--ac:#0096D6"><div class="ms-lbl">Gemiddeld per werkdag</div>'+
        '<div class="ms-big" style="font-size:60px;color:#F4F7FB">'+msK1(M.avg)+'</div>'+
        '<div class="ms-sub" style="font-size:22px">'+(best>=0 ? 'Beste dag: '+(best===now && isToday ? 'vandaag' : DN[slots[best].dow]+' '+slots[best].d)+' · '+msK1(bestV) : '')+'</div></div>';
   cards.innerHTML = h;
+}
+function msLastOrderCard(){
+  const o = (DATA.recent_orders || [])[0];
+  const base = 'top:418px;height:170px;';
+  if(!o) return '<div class="ms-card" style="'+base+'--ac:#0096D6"><div class="ms-lbl">Laatste order</div><div class="ms-sub" style="font-size:24px;margin-top:22px">nog geen orders geladen</div></div>';
+  const acc = accountClassOf(o.client), accCol = {A:'#16A34A', B:'#EA580C', C:'#87898B'}[acc] || '#87898B';
+  const raw = (o.cust != null && typeof INDUSTRY_MAP !== 'undefined' && INDUSTRY_MAP && INDUSTRY_MAP[String(o.cust)]) ? INDUSTRY_MAP[String(o.cust)] : '';
+  const sec = (typeof normalizeIndustry === 'function') ? normalizeIndustry(raw) : raw;
+  const secShow = (sec && sec !== 'Onbekend') ? sec : '';
+  const secCol = secShow ? indColor(sec, ALL_SECTORS.indexOf(sec)) : '';
+  const fresh = !!(msNew && !msNew.test && Date.now() < msNew.until);
+  const esc = function(x){ return String(x == null ? '' : x).replace(/&/g,'&amp;').replace(/</g,'&lt;'); };
+  const stCol = (typeof statusStyle === 'function') ? statusStyle(o.status) : '';
+  return '<div class="ms-card" style="'+base+'--ac:'+(fresh?'#FACC15':'#0096D6')+(fresh?';background:#00405F;box-shadow:inset 0 0 0 1.5px rgba(250,204,21,.55)':'')+'">'+
+    '<div class="ms-lbl" style="display:flex;align-items:center;gap:12px;height:30px">Laatste order'+(fresh?'<span class="ms-new" style="font-size:16px;padding:2px 12px">NIEUW</span>':'')+'<span id="msAgo" style="margin-left:auto;letter-spacing:.02em;text-transform:none;font-weight:500;color:#9FB3C8;font-size:20px">'+esc(msAgoText(o))+'</span></div>'+
+    '<div style="display:flex;align-items:center;gap:12px;min-width:0;margin-top:2px"><span style="font-size:34px;font-weight:800;color:#F4F7FB;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0">'+esc(o.client)+'</span>'+(msAbcShow()?'<span style="flex:none;width:32px;height:32px;border-radius:50%;background:'+accCol+';color:#fff;font-weight:800;font-size:18px;display:inline-flex;align-items:center;justify-content:center">'+acc+'</span>':'')+'</div>'+
+    '<div style="display:flex;align-items:center;justify-content:space-between;gap:16px;margin-top:4px"><span style="font-size:48px;font-weight:900;line-height:1.1;color:'+(fresh?'#FACC15':'#4ADE80')+';white-space:nowrap">'+fmtEur(o.gross||o.revenue||0)+'</span>'+
+    '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;min-width:0;font-size:18px;color:#C7D3E0"><span style="white-space:nowrap"><span style="color:#9FB3C8">'+esc(o.project)+'</span>'+(o.status ? ' <span style="'+stCol+';padding:0 9px;border-radius:5px;font-size:15px;font-weight:700;margin-left:6px">'+esc(o.status)+'</span>' : '')+'</span>'+
+    (secShow ? '<span style="display:inline-flex;align-items:center;gap:7px;max-width:250px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"><i style="flex:none;width:10px;height:10px;border-radius:50%;background:'+secCol+';display:inline-block"></i><span style="overflow:hidden;text-overflow:ellipsis">'+esc(secShow)+'</span></span>' : '')+'</div></div></div>';
+}
+function msAbcShow(){ try{ return !!msBuild().abc; }catch(e){ return true; } }
+function msAgoText(o){
+  if(!o || !o.day || !o.time) return '';
+  const p = o.day.split('-'), t = o.time.split(':');
+  const ts = new Date(+p[0], +p[1]-1, +p[2], +t[0], +t[1]).getTime();
+  const mins = Math.max(0, Math.round((Date.now()-ts)/60000));
+  if(o.day === vkTodayKey()) return o.time+' · '+(mins < 1 ? 'zojuist' : mins < 60 ? mins+' min geleden' : Math.floor(mins/60)+' uur geleden');
+  return p[2]+'-'+p[1]+' · '+o.time;
 }
 function msFit(){
   const st = document.getElementById('msStage'); if(!st) return;
   const s = Math.min(window.innerWidth/1920, window.innerHeight/1080);
   st.style.transform = 'translate('+((window.innerWidth-1920*s)/2)+'px,'+((window.innerHeight-1080*s)/2)+'px) scale('+s+')';
 }
+let msIndSig = -2;
 function msUpdateLive(){
+  try{ const sg = (typeof INDUSTRY_MAP !== 'undefined' && INDUSTRY_MAP) ? Object.keys(INDUSTRY_MAP).length : -1; if(sg !== msIndSig){ const first = msIndSig === -2; msIndSig = sg; if(!first && msOpen) msRender(); } }catch(e){}
+  try{ const ag = document.getElementById('msAgo'); if(ag) ag.textContent = msAgoText((DATA.recent_orders||[])[0]); }catch(e){}
   const lv = document.getElementById('msLive'), lb = document.getElementById('liveBanner'); if(!lv) return;
   if(!window.__vkLastFetch){ lv.className = 'ms-live'; lv.innerHTML = '<i></i>LIVE'; return; }
   lv.className = 'ms-live' + (lb && lb.className ? ' '+lb.className : '');
@@ -5653,6 +5692,33 @@ function msCloseScreen(){
 function msAfterRender(){
   const b = document.getElementById('last6Fs'); if(b) b.style.display = DATA.view_closed ? 'none' : '';
   if(msOpen){ try{ msRender(); }catch(e){ console.warn('maandscherm', e); } }
+  else { try{ msAutoStart(); }catch(e){ console.warn('maandscherm start', e); } }
+}
+// Het dashboard start standaard met het maandscherm (één keer per keer openen; ✕ of Esc brengt je naar het gewone dashboard).
+// Uitzetten kan met localStorage 'rc_start_ms' = '0'. Een browser staat schermvullend alleen toe na een klik of toets: lukt dat
+// bij het openen niet, dan vult het maandscherm het venster en gaat het bij de eerste klik of toets alsnog schermvullend.
+let msAutoDone = false;
+function msAutoStart(){
+  if(msAutoDone || msOpen) return;
+  try{ if(localStorage.getItem('rc_start_ms') === '0'){ msAutoDone = true; return; } }catch(e){}
+  if(DATA.view_closed || !hasData() || !msBuild()) return;
+  msAutoDone = true;
+  msOpenScreen();
+  msArmFullscreen();
+}
+function msArmFullscreen(){
+  const ms = document.getElementById('monthScreen'); if(!ms) return;
+  const done = function(){ ms.removeEventListener('pointerdown', h, true); ms.removeEventListener('keydown', h, true); document.removeEventListener('keydown', h, true); };
+  const h = function(e){
+    if(!msOpen){ done(); return; }
+    if(e.type === 'keydown' && e.key === 'Escape') return;
+    if(e.target && e.target.closest && e.target.closest('#msClose')) return;
+    if(!(document.fullscreenElement || document.webkitFullscreenElement)){
+      try{ const req = ms.requestFullscreen || ms.webkitRequestFullscreen; if(req){ const pr = req.call(ms); if(pr && pr.catch) pr.catch(function(){}); } }catch(x){}
+    }
+    done();
+  };
+  ms.addEventListener('pointerdown', h, true); document.addEventListener('keydown', h, true);
 }
 function msSetup(){
   const f6 = document.getElementById('last6Fs'); if(!f6) return;
