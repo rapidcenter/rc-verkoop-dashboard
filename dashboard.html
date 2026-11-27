@@ -5626,16 +5626,16 @@ function msUpdateSound(){
 function msSoundClick(){
   const on = vkSoundOn(), running = __vkAudio && __vkAudio.state === 'running';
   if(on && running){ try{ localStorage.setItem('rc_sound','0'); }catch(e){} }
-  else { try{ localStorage.setItem('rc_sound','1'); }catch(e){} vkAudioCtx(); vkPlayDing(); }   // aanzetten of ontgrendelen: meteen een testgeluid
+  else { try{ localStorage.setItem('rc_sound','1'); }catch(e){} vkAudioCtx(); vkPlayDing(); msTestOrder(15000, true); }   // aanzetten of ontgrendelen: meteen testgeluid + testknipperen
   msUpdateSound(); setTimeout(msUpdateSound, 300);
   if(typeof vkUpdateSoundBtn === 'function') vkUpdateSoundBtn();
 }
 // Toets T in het maandscherm: nepbestelling van 1.000 euro (15 seconden knipperen), met geluid als dat aanstaat. Telt nergens mee.
-function msTestOrder(){
-  msNew = {amt: 1000, at: new Date(), until: Date.now() + 15000, test: true};
+function msTestOrder(ms, silent){
+  msNew = {amt: 1000, at: new Date(), until: Date.now() + (ms || 15000), test: true};
   msScheduleExpiry();
-  try{ msRender(); }catch(e){}
-  vkNewOrders(1);
+  if(msOpen){ try{ msRender(); }catch(e){} }
+  if(!silent) vkNewOrders(1);
 }
 function msOpenScreen(){
   const ms = document.getElementById('monthScreen'); if(!ms) return;
@@ -5725,6 +5725,7 @@ function vkSetupSound(){
   });
   if(t) t.addEventListener('click', function(){
     vkPlayDing();
+    if(typeof msTestOrder === 'function') msTestOrder(30000, true);   // ook het knipperen in het maandscherm testen (30 s, zodat je het scherm nog kunt openen)
     t.classList.add('is-playing'); setTimeout(function(){ t.classList.remove('is-playing'); vkUpdateSoundBtn(); }, 900);
     setTimeout(vkUpdateSoundBtn, 300);
   });
