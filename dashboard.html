@@ -434,7 +434,13 @@
   .ms-hdr{position:absolute;left:40px;top:30px;right:40px;height:96px}
   .ms-hdr .t{font-size:58px;font-weight:800;letter-spacing:.04em;line-height:1.1}
   .ms-hdr .s{font-size:25px;color:#8FA3B8;margin-top:2px}
-  .ms-live{z-index:5;position:absolute;right:108px;top:40px;display:inline-flex;align-items:center;gap:10px;height:52px;padding:0 22px;border-radius:10px;border:1px solid #22C55E;background:rgba(34,197,94,.16);color:#4ADE80;font-weight:700;font-size:21px;letter-spacing:.08em}
+  .ms-bar{z-index:5;position:absolute;right:108px;top:40px;height:52px;display:flex;align-items:stretch;gap:14px}
+  .ms-snd{display:inline-flex;align-items:center;gap:10px;height:52px;padding:0 20px;border-radius:10px;border:1px solid rgba(255,255,255,.28);background:rgba(255,255,255,.06);color:#B8C4D6;font:700 19px 'Roboto',sans-serif;letter-spacing:.08em;cursor:pointer;white-space:nowrap}
+  .ms-snd svg{width:26px;height:26px;flex:none}
+  .ms-snd:hover{background:rgba(255,255,255,.14);color:#fff}
+  .ms-snd.is-on{border-color:#22C55E;background:rgba(34,197,94,.16);color:#4ADE80}
+  .ms-snd.is-locked{border-color:#F97316;background:rgba(249,115,22,.16);color:#FDBA74;animation:rcPulse 2s infinite}
+  .ms-live{z-index:5;display:inline-flex;align-items:center;gap:10px;height:52px;padding:0 22px;border-radius:10px;border:1px solid #22C55E;background:rgba(34,197,94,.16);color:#4ADE80;font-weight:700;font-size:21px;letter-spacing:.08em}
   .ms-live i{display:inline-block;width:12px;height:12px;border-radius:50%;background:#22C55E}
   .ms-live.is-warn{border-color:#F97316;background:rgba(249,115,22,.16);color:#FDBA74}.ms-live.is-warn i{background:#F97316}
   .ms-live.is-stale{border-color:#EF4444;background:rgba(239,68,68,.16);color:#FCA5A5}.ms-live.is-stale i{background:#EF4444}
@@ -5388,7 +5394,7 @@ function msScheduleExpiry(){
 }
 function msRegisterNew(n, amt){
   if(!(n > 0)) return;
-  const active = msNew && Date.now() < msNew.until;
+  const active = msNew && !msNew.test && Date.now() < msNew.until;   // een testbestelling telt nooit mee
   msNew = {amt: (active ? msNew.amt : 0) + (amt || 0), at: new Date(), until: Date.now() + MS_BLINK_MS};   // meerdere orders binnen de tijd: bedrag telt op, de 10 minuten beginnen opnieuw
   msScheduleExpiry();
 }
@@ -5566,7 +5572,7 @@ function msRender(){
   let h = '';
   const nw = (msNew && Date.now() < msNew.until) ? msNew : null;
   h += '<div class="ms-card'+(nw?' ms-blink':'')+'" style="top:140px;height:262px;--ac:#16A34A"><div class="ms-lbl" style="display:flex;justify-content:space-between;align-items:center;height:40px;margin-top:-4px"><span>Omzet deze maand</span>'+
-       (nw ? '<span class="ms-new">+ '+fmtEur(nw.amt)+' <small>'+nw.at.toLocaleTimeString('nl-NL',{hour:'2-digit',minute:'2-digit'})+'</small></span>' : '')+'</div>'+
+       (nw ? '<span class="ms-new">+ '+fmtEur(nw.amt)+' <small>'+(nw.test ? 'TEST' : nw.at.toLocaleTimeString('nl-NL',{hour:'2-digit',minute:'2-digit'}))+'</small></span>' : '')+'</div>'+
        '<div class="ms-big" style="font-size:78px;color:#4ADE80">'+fmtEur(M.total)+'</div>'+
        '<div class="ms-sub">'+(M.ly>0 ? 'vorig jaar hele maand '+msK0(M.ly)+(pct!=null ? '<span class="ms-pill" style="background:'+(pct>=0?'rgba(34,197,94,.18);color:#4ADE80':'rgba(239,68,68,.18);color:#FCA5A5')+'">'+(pct>=0?'+':'')+pct+'%</span>' : '') : 'nog geen vorig jaar geladen')+'</div>'+
        (!M.abc ? '' : '<div style="display:flex;height:16px;margin-top:16px;gap:2px;border-radius:8px;overflow:hidden"><div style="width:'+sA.toFixed(1)+'%;background:#16A34A"></div><div style="width:'+sB.toFixed(1)+'%;background:#EA580C"></div><div style="width:'+sC.toFixed(1)+'%;background:#87898B"></div></div>'+
@@ -5608,11 +5614,34 @@ function msUpdateLive(){
   lv.className = 'ms-live' + (lb && lb.className ? ' '+lb.className : '');
   lv.innerHTML = '<i></i>LIVE · '+window.__vkLastFetch.toLocaleTimeString('nl-NL',{hour:'2-digit',minute:'2-digit'});
 }
+const MS_ICON_ON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9h4l5-4v14l-5-4H3z"/><path d="M16 9a4 4 0 0 1 0 6M18.5 6.5a8 8 0 0 1 0 11"/></svg>';
+const MS_ICON_OFF = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9h4l5-4v14l-5-4H3z"/><path d="M16 9.5l5 5M21 9.5l-5 5"/></svg>';
+function msUpdateSound(){
+  const b = document.getElementById('msSound'); if(!b) return;
+  const on = vkSoundOn(), locked = on && !(__vkAudio && __vkAudio.state === 'running');
+  b.classList.toggle('is-on', on && !locked);
+  b.classList.toggle('is-locked', locked);
+  b.innerHTML = (on ? MS_ICON_ON : MS_ICON_OFF) + (locked ? 'KLIK VOOR GELUID' : (on ? 'GELUID AAN' : 'GELUID UIT'));
+}
+function msSoundClick(){
+  const on = vkSoundOn(), running = __vkAudio && __vkAudio.state === 'running';
+  if(on && running){ try{ localStorage.setItem('rc_sound','0'); }catch(e){} }
+  else { try{ localStorage.setItem('rc_sound','1'); }catch(e){} vkAudioCtx(); vkPlayDing(); }   // aanzetten of ontgrendelen: meteen een testgeluid
+  msUpdateSound(); setTimeout(msUpdateSound, 300);
+  if(typeof vkUpdateSoundBtn === 'function') vkUpdateSoundBtn();
+}
+// Toets T in het maandscherm: nepbestelling van 1.000 euro (15 seconden knipperen), met geluid als dat aanstaat. Telt nergens mee.
+function msTestOrder(){
+  msNew = {amt: 1000, at: new Date(), until: Date.now() + 15000, test: true};
+  msScheduleExpiry();
+  try{ msRender(); }catch(e){}
+  vkNewOrders(1);
+}
 function msOpenScreen(){
   const ms = document.getElementById('monthScreen'); if(!ms) return;
   ms.style.display = 'block'; msOpen = true; msFsEntered = false;
-  msFit(); msRender(); msUpdateLive();
-  if(!msLiveTimer) msLiveTimer = setInterval(msUpdateLive, 1000);
+  msFit(); msRender(); msUpdateLive(); msUpdateSound();
+  if(!msLiveTimer) msLiveTimer = setInterval(function(){ msUpdateLive(); msUpdateSound(); }, 1000);
   try{ const req = ms.requestFullscreen || ms.webkitRequestFullscreen; if(req){ const pr = req.call(ms); if(pr && pr.catch) pr.catch(function(){}); } }catch(e){}
 }
 function msCloseScreen(){
@@ -5632,7 +5661,12 @@ function msSetup(){
   f6.addEventListener('click', msOpenScreen);
   const c = document.getElementById('msClose'); if(c) c.addEventListener('click', msCloseScreen);
   window.addEventListener('resize', function(){ if(msOpen) msFit(); });
-  document.addEventListener('keydown', function(e){ if(msOpen && e.key === 'Escape') msCloseScreen(); });
+  document.addEventListener('keydown', function(e){
+    if(!msOpen) return;
+    if(e.key === 'Escape') msCloseScreen();
+    else if((e.key === 't' || e.key === 'T') && !e.ctrlKey && !e.metaKey && !e.altKey) msTestOrder();
+  });
+  const sb = document.getElementById('msSound'); if(sb) sb.addEventListener('click', msSoundClick);
   const fsch = function(){
     const ms = document.getElementById('monthScreen'), fe = document.fullscreenElement || document.webkitFullscreenElement;
     if(fe === ms){ msFsEntered = true; setTimeout(msFit, 50); }
@@ -5694,7 +5728,7 @@ function vkSetupSound(){
     t.classList.add('is-playing'); setTimeout(function(){ t.classList.remove('is-playing'); vkUpdateSoundBtn(); }, 900);
     setTimeout(vkUpdateSoundBtn, 300);
   });
-  const unlock = function(){ if(vkSoundOn()) vkAudioCtx(); setTimeout(vkUpdateSoundBtn, 200); };
+  const unlock = function(){ if(vkSoundOn()) vkAudioCtx(); setTimeout(vkUpdateSoundBtn, 200); setTimeout(function(){ if(typeof msUpdateSound==='function') msUpdateSound(); }, 250); };
   document.addEventListener('pointerdown', unlock, true);
   document.addEventListener('keydown', unlock, true);
   vkUpdateSoundBtn();
@@ -5872,7 +5906,7 @@ window.addEventListener('DOMContentLoaded', async function(){
 </script>
 <div id="monthScreen" class="ms" style="display:none"><div class="ms-stage" id="msStage">
   <div class="ms-hdr"><div class="t" id="msTitle"></div><div class="s" id="msSub"></div></div>
-  <div class="ms-live" id="msLive"></div>
+  <div class="ms-bar"><button type="button" class="ms-snd" id="msSound" title="Geluid bij een nieuwe order aan/uit (klik = testgeluid). Toets T = test met een nepbestelling"></button><div class="ms-live" id="msLive"></div></div>
   <button type="button" class="ms-close" id="msClose" title="Sluiten (Esc)" aria-label="Sluiten">&#10005;</button>
   <svg id="msSvg" width="1920" height="1080" viewBox="0 0 1920 1080" style="position:absolute;left:0;top:0"></svg>
   <div id="msCards"></div>
